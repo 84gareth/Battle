@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0%" stop-color="#3a0d4e"/>
+      <stop offset="60%" stop-color="#180628"/>
+      <stop offset="100%" stop-color="#08040e"/>
+    </radialGradient>
+    <linearGradient id="blade" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#8ceef4"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#5cc8e0"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffe25a"/>
+      <stop offset="50%" stop-color="#ff46c8"/>
+      <stop offset="100%" stop-color="#5cf0ff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="10" y="10" width="492" height="492" rx="104" fill="none" stroke="#ff46c8" stroke-width="6" opacity="0.85"/>
+
+  <!-- neon arena ring -->
+  <ellipse cx="256" cy="330" rx="168" ry="52" fill="none" stroke="url(#ring)" stroke-width="9" filter="url(#glow)" opacity="0.9"/>
+  <ellipse cx="256" cy="330" rx="130" ry="38" fill="none" stroke="#ff46c8" stroke-width="4" opacity="0.5"/>
+
+  <!-- sword -->
+  <g filter="url(#glow)">
+    <polygon points="256,66 274,120 274,300 238,300 238,120" fill="url(#blade)"/>
+    <polygon points="256,66 256,300 238,300 238,120" fill="#bfeaf2" opacity="0.55"/>
+    <rect x="196" y="300" width="120" height="22" rx="8" fill="#d8b878"/>
+    <rect x="246" y="322" width="20" height="46" rx="6" fill="#4a3418"/>
+    <circle cx="256" cy="376" r="14" fill="#d8b878"/>
+  </g>
+
+  <!-- 7 7 7 jackpot pips -->
+  <g fill="#ffe25a" font-family="Georgia, serif" font-weight="bold" font-size="58" text-anchor="middle" filter="url(#glow)">
+    <text x="150" y="250" opacity="0.9">7</text>
+    <text x="362" y="250" opacity="0.9">7</text>
+  </g>
+</svg>

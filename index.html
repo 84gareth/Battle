@@ -3,8 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>ENDLESS SAGA</title>
+<title>Endless Saga — Battle Square</title>
+<meta name="description" content="A Final Fantasy VII Gold Saucer–inspired roguelike battle arena. Survive eight battles, spin the handicap reels, and choose how to beat the curse. HD-2D, single-file, playable in your browser.">
+<meta name="theme-color" content="#ff46c8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Endless Saga">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<!-- Open Graph / social preview -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Endless Saga — Battle Square">
+<meta property="og:description" content="An FF7 Gold Saucer–style roguelike arena. Spin the handicap reels, choose your gamble, and see how far you can go.">
+<meta property="og:image" content="preview.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -1643,18 +1659,20 @@ function revealWagers(wagers){
 }
 
 /* ============================ SCORES / STORAGE ============================ */
+const SCORE_KEY='endlessSaga.battleSquare.highscores';
 let memScores=[];
-async function loadScores(){
-  try{const r=await window.storage.get('highscores');return r?JSON.parse(r.value):memScores;}
-  catch(e){return memScores;}
+function loadScores(){
+  try{const r=localStorage.getItem(SCORE_KEY);memScores=r?JSON.parse(r):[];}
+  catch(e){/* private-mode or disabled storage */}
+  return memScores;
 }
-async function saveScore(entry){
-  let scores=await loadScores();
+function saveScore(entry){
+  let scores=loadScores();
   scores.push(entry);
   scores.sort((a,b)=>b.score-a.score);
   scores=scores.slice(0,10);
   memScores=scores;
-  try{await window.storage.set('highscores',JSON.stringify(scores));}catch(e){}
+  try{localStorage.setItem(SCORE_KEY,JSON.stringify(scores));}catch(e){}
   return scores;
 }
 
@@ -1731,6 +1749,10 @@ async function gameOver(){
 /* boot */
 showTitle();
 document.addEventListener('pointerdown',()=>ac(),{once:true});
+/* PWA service worker (offline + installable). Safe no-op when unsupported or opened via file://. */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>

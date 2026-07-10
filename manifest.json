@@ -1,0 +1,16 @@
+{
+  "name": "Endless Saga — Battle Square",
+  "short_name": "Endless Saga",
+  "description": "An FF7 Gold Saucer–style roguelike battle arena. Spin the handicap reels, choose your gamble, and survive.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#05060a",
+  "theme_color": "#ff46c8",
+  "icons": [
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any maskable" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
+  ]
+}
