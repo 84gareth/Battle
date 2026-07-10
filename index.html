@@ -163,6 +163,14 @@
         border:1px solid #ff46c8;border-top:none;
         border-radius:0 0 8px 8px;box-shadow:0 0 18px rgba(255,70,200,.5),inset 0 -8px 16px rgba(255,70,200,.15);}
   #ribbon.hidden{display:none;}
+  #bossbar{position:absolute;top:8%;left:50%;transform:translateX(-50%);width:56%;z-index:7;text-align:center;}
+  #bossbar.hidden{display:none;}
+  .bb-name{font-family:'Marcellus',serif;letter-spacing:.18em;font-size:clamp(11px,2.1vmin,17px);
+        color:#ff8ad0;text-shadow:0 0 10px rgba(255,70,200,.6);margin-bottom:4px;}
+  .bb-track{height:11px;background:rgba(0,0,0,.7);border:1px solid #ff46c8;border-radius:2px;overflow:hidden;
+        box-shadow:0 0 16px rgba(255,70,200,.5);}
+  .bb-track i{display:block;height:100%;width:100%;transition:width .3s;
+        background:linear-gradient(180deg,#ff9ad8,#ff46c8 45%,#8a1a6a);}
   #ribbon b{color:#5cf0ff;font-weight:normal;}
   #bp{color:#ffe25a !important;text-shadow:0 0 8px rgba(255,210,60,.6);letter-spacing:.08em;}
   #callout{position:absolute;top:26%;left:50%;transform:translate(-50%,-50%) scale(.4);z-index:9;
@@ -245,6 +253,7 @@
     <div class="srow tiny"><span id="gear"></span><span id="scoretxt" style="color:#ffe25a;text-shadow:0 0 8px rgba(255,210,60,.6)">BP 0</span></div>
   </div>
   <div id="ribbon" class="hidden">BATTLE <b>1</b> / 8</div>
+  <div id="bossbar" class="hidden"><div class="bb-name"></div><div class="bb-track"><i></i></div></div>
   <div id="callout"></div>
   <div id="hcbadge" class="hidden"></div>
   <button id="mute" title="Toggle sound">SOUND ON</button>
@@ -260,7 +269,8 @@
 "use strict";
 /* ============================ UTILS ============================ */
 const $=s=>document.querySelector(s);
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let SPEED=1;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms/SPEED));
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const ri=(a,b)=>Math.floor(rnd(a,b+1));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -271,9 +281,33 @@ const W=960,H=540;
 let AC=null,muted=false;
 /* --- settings (persisted) --- */
 const CFG_KEY='endlessSaga.battleSquare.cfg';
-const CFG={sfx:0.85,music:0.6,reduceFlash:false,cbPalette:false};
+const CFG={sfx:0.85,music:0.6,reduceFlash:false,cbPalette:false,fast:false};
 (function(){try{const r=localStorage.getItem(CFG_KEY);if(r)Object.assign(CFG,JSON.parse(r));}catch(e){}})();
 function saveCfg(){try{localStorage.setItem(CFG_KEY,JSON.stringify(CFG));}catch(e){}}
+SPEED=CFG.fast?2:1;
+let chosenChar=0;
+/* --- lifetime stats + achievements (persisted) --- */
+const LT_KEY='endlessSaga.battleSquare.lifetime';
+const LT={runs:0,battlesWon:0,bosses:0,champions:0,deaths:0,gauntlets:0,bestCombo:0,bestBP:0,totalBP:0,kills:0,limits:0,ach:{}};
+(function(){try{const r=localStorage.getItem(LT_KEY);if(r)Object.assign(LT,JSON.parse(r));}catch(e){}})();
+function saveLT(){try{localStorage.setItem(LT_KEY,JSON.stringify(LT));}catch(e){}}
+const ACHIEVEMENTS=[
+ {id:'first',icon:'⚔️',name:'First Blood',desc:'Win your first battle',test:()=>LT.battlesWon>=1},
+ {id:'boss1',icon:'🐉',name:'Giant Slayer',desc:'Defeat a boss',test:()=>LT.bosses>=1},
+ {id:'gauntlet',icon:'🏆',name:'Champion',desc:'Clear the 8-battle gauntlet',test:()=>LT.gauntlets>=1},
+ {id:'combo10',icon:'🔥',name:'Combo Artist',desc:'Reach a ×10 combo',test:()=>LT.bestCombo>=10},
+ {id:'bp5k',icon:'💰',name:'High Roller',desc:'Score 5,000 BP in one run',test:()=>LT.bestBP>=5000},
+ {id:'limit10',icon:'★',name:'Limitless',desc:'Unleash 10 Limit Breaks',test:()=>LT.limits>=10},
+ {id:'kills100',icon:'💀',name:'Centurion',desc:'Defeat 100 foes',test:()=>LT.kills>=100},
+ {id:'sovereign',icon:'👑',name:'Regicide',desc:'Defeat the Arena Sovereign',test:()=>LT.champions>=1},
+ {id:'endless20',icon:'♾️',name:'Endless',desc:'Reach Battle 20',test:()=>LT.maxRound>=20},
+];
+function checkAchievements(){
+  const newly=[];
+  for(const a of ACHIEVEMENTS){if(!LT.ach[a.id]&&a.test()){LT.ach[a.id]=Date.now();newly.push(a);}}
+  if(newly.length){saveLT();}
+  return newly;
+}
 let sfxBus=null;
 function sfxBusNode(){const c=ac();if(c&&!sfxBus){sfxBus=c.createGain();sfxBus.gain.value=CFG.sfx;sfxBus.connect(c.destination);}return sfxBus;}
 function applyVolumes(){if(sfxBus)sfxBus.gain.value=CFG.sfx;if(musicGain)musicGain.gain.value=CFG.music*.9;}
@@ -324,6 +358,8 @@ function settingsHTML(back){
     '<div class="setrow"><span>Music</span><input type="range" id="sMus" min="0" max="100" value="'+Math.round(CFG.music*100)+'"></div>'+
     '<div class="setrow"><span>Reduce flashing</span><button class="tog'+(CFG.reduceFlash?' on':'')+'" id="sFlash">'+(CFG.reduceFlash?'ON':'OFF')+'</button></div>'+
     '<div class="setrow"><span>High-contrast damage</span><button class="tog'+(CFG.cbPalette?' on':'')+'" id="sCb">'+(CFG.cbPalette?'ON':'OFF')+'</button></div>'+
+    '<div class="setrow"><span>Battle speed</span><button class="tog'+(CFG.fast?' on':'')+'" id="sSpeed">'+(CFG.fast?'2×':'1×')+'</button></div>'+
+    (LT.gauntlets>=1?'<div class="setrow"><span>Arena skin</span><button class="tog on" id="sSkin">'+(CFG.arenaSkin?'MIDNIGHT':'NEON')+'</button></div>':'<div class="setrow" style="opacity:.5"><span>Arena skin</span><span style="font-size:.8em">🔒 clear the gauntlet</span></div>')+
     '<button class="mbtn" id="sBack">‹ Back</button>';
 }
 function wireSettings(back){
@@ -331,6 +367,8 @@ function wireSettings(back){
   $('#sMus').addEventListener('input',e=>{CFG.music=e.target.value/100;applyVolumes();saveCfg();});
   $('#sFlash').addEventListener('click',()=>{CFG.reduceFlash=!CFG.reduceFlash;saveCfg();SFX.ok();openModal(settingsHTML(back));wireSettings(back);});
   $('#sCb').addEventListener('click',()=>{CFG.cbPalette=!CFG.cbPalette;saveCfg();SFX.ok();openModal(settingsHTML(back));wireSettings(back);});
+  $('#sSpeed').addEventListener('click',()=>{CFG.fast=!CFG.fast;SPEED=CFG.fast?2:1;saveCfg();SFX.ok();openModal(settingsHTML(back));wireSettings(back);});
+  const sk=$('#sSkin');if(sk)sk.addEventListener('click',()=>{CFG.arenaSkin=CFG.arenaSkin?0:1;saveCfg();SFX.ok();openModal(settingsHTML(back));wireSettings(back);});
   $('#sBack').addEventListener('click',()=>{SFX.back();back();});
 }
 function openSettings(back){openModal(settingsHTML(back));wireSettings(back);}
@@ -351,11 +389,41 @@ function openPause(){
     '<button class="mbtn" id="pResume">Resume</button>'+
     '<button class="mbtn" id="pRules">How to Fight</button>'+
     '<button class="mbtn" id="pSettings">Settings</button>'+
+    '<button class="mbtn" id="pRestart">Restart Run</button>'+
     '<button class="mbtn" id="pQuit" style="border-color:rgba(255,90,120,.5);color:#ffb0b0">Quit to Title</button>');
   $('#pResume').addEventListener('click',()=>{SFX.back();resumeGame();});
   $('#pRules').addEventListener('click',()=>{SFX.ok();openRules(openPause);});
   $('#pSettings').addEventListener('click',()=>{SFX.ok();openSettings(openPause);});
-  $('#pQuit').addEventListener('click',()=>{SFX.back();paused=false;closeModal();showTitle();});
+  $('#pRestart').addEventListener('click',()=>{SFX.ok();confirmModal('Restart this run from Battle 1?',()=>{paused=false;closeModal();startGame(chosenChar);},openPause);});
+  $('#pQuit').addEventListener('click',()=>{SFX.ok();confirmModal('Quit to title? This run will end.',()=>{paused=false;closeModal();showTitle();},openPause);});
+}
+function confirmModal(msg,onYes,onNo){
+  openModal('<div class="slot-title" style="font-size:clamp(15px,3vmin,24px)">'+msg+'</div><hr class="rule">'+
+    '<button class="mbtn" id="cYes">Yes</button><button class="mbtn" id="cNo">No</button>');
+  $('#cYes').addEventListener('click',()=>{SFX.ok();onYes();});
+  $('#cNo').addEventListener('click',()=>{SFX.back();onNo();});
+}
+const TUTORIAL=[
+ ['⚔️ Welcome to the Battle Square','You fight solo against waves of foes. Pick <b>Attack</b>, <b>Magic</b>, <b>Item</b> or <b>Defend</b> each turn. Survive all 8 battles, then push into Endless Mode.'],
+ ['🎰 The Handicap Reels','Between battles the reels deal three <b>wagers</b>. Each pairs a curse for the next fight with a reward. Choose the gamble that suits you — beating a curse pays bonus BP.'],
+ ['🔥 Weaknesses & Status','Hit a foe\'s elemental <b>weakness</b> for big damage and BP. Spells can inflict burn, freeze and poison; watch for the same coming your way.'],
+ ['★ Limit Break','Your LB gauge fills as you deal and take damage. At MAX, unleash a devastating Limit — each champion has their own.'],
+ ['⚠️ Bosses','Bosses telegraph a charged attack. Hit them hard that turn to <b>interrupt</b> it. Good luck, champion!'],
+];
+function showTutorial(){
+  return new Promise(res=>{
+    let i=0;
+    const step=()=>{
+      if(i>=TUTORIAL.length){LT.tut=1;saveLT();closeModal();res();return;}
+      const[t,b]=TUTORIAL[i];
+      openModal('<div class="slot-title" style="font-size:clamp(15px,3vmin,24px)">'+t+'</div><hr class="rule">'+
+        '<div class="rules" style="text-align:center">'+b+'</div>'+
+        '<button class="mbtn" id="tNext">'+(i<TUTORIAL.length-1?'Next ▸':'Fight!')+'</button>'+
+        '<div class="subtitle" style="font-size:clamp(10px,1.6vmin,13px)">'+(i+1)+' / '+TUTORIAL.length+'</div>');
+      $('#tNext').addEventListener('click',()=>{SFX.ok();i++;step();});
+    };
+    step();
+  });
 }
 function resumeGame(){paused=false;closeModal();}
 $('#pausebtn').addEventListener('click',openPause);
@@ -778,42 +846,76 @@ const ENEMY_TYPES=[
  {id:'goblin',name:'Goblin Raider',art:'goblin',col:{base:'#5aa048',hi:'#9ad878',cloth:'#7a4a24'},dh:142,hp:46,atk:12,mag:6,def:3,weak:'fire',res:null,tier:2,anim:'bob',behavior:['enrage'],
   atks:[{n:'Rusty Blade',t:'phys',p:1.1},{n:'Wild Swing',t:'phys',p:1.35}]},
  {id:'skel',name:'Skeleton Knight',art:'skel',col:{base:'#e6e2d2',hi:'#fffef4',eye:'#8ce0ff'},dh:150,hp:52,atk:13,mag:7,def:4,weak:'fire',res:'ice',tier:2,anim:'lumber',behavior:[],
-  atks:[{n:'Bone Cleaver',t:'phys',p:1.2},{n:'Curse',t:'dark',p:1.1}]},
+  immune:['poison','freeze'],atks:[{n:'Bone Cleaver',t:'phys',p:1.2},{n:'Curse',t:'dark',p:1.1}]},
  {id:'ghost',name:'Wailing Ghost',art:'ghost',col:{base:'#9ec0e6',hi:'#e6f4ff',eye:'#dcefff'},dh:140,hp:40,atk:9,mag:13,def:2,weak:'fire',res:'bolt',tier:2,fly:1,anim:'sway',behavior:['lifesteal'],
-  atks:[{n:'Chill Touch',t:'ice',p:1.15},{n:'Nightmare',t:'dark',p:1.25}]},
+  immune:['poison'],atks:[{n:'Chill Touch',t:'ice',p:1.15},{n:'Nightmare',t:'dark',p:1.25}]},
  {id:'mage',name:'Dark Mage',art:'mage',col:{base:'#5a3aa0',hi:'#8a6ad4',orb:'#c088ff',eye:'#ff6a6a'},dh:150,hp:44,atk:8,mag:15,def:2,weak:'bolt',res:'dark',tier:3,anim:'sway',behavior:['heal_ally'],
   atks:[{n:'Shadow Bolt',t:'dark',p:1.2},{n:'Flame Rune',t:'fire',p:1.2},{n:'Frost Rune',t:'ice',p:1.2}]},
  {id:'golem',name:'Stone Golem',art:'golem',col:{base:'#8a94a4',hi:'#c8d0dc',eye:'#ff5030'},dh:158,hp:80,atk:16,mag:6,def:7,weak:'bolt',res:'phys',tier:3,anim:'lumber',behavior:['harden','enrage'],
-  atks:[{n:'Boulder Fist',t:'phys',p:1.25},{n:'Quake Stomp',t:'phys',p:1.5}]},
+  immune:['poison'],atks:[{n:'Boulder Fist',t:'phys',p:1.25},{n:'Quake Stomp',t:'phys',p:1.5}]},
  {id:'hornet',name:'Venom Hornet',art:'bat',col:{base:'#c8a020',hi:'#ffe258',eye:'#ff5030'},dh:112,hp:26,atk:9,mag:6,def:1,weak:'ice',res:null,tier:1,fly:1,anim:'hover',behavior:[],
   atks:[{n:'Sting',t:'phys',p:1},{n:'Venom Jab',t:'dark',p:1.05}]},
  {id:'salamander',name:'Salamander',art:'imp',col:{base:'#ff6420',hi:'#ffc060',horn:'#5a1808',eye:'#fff2a0'},dh:150,hp:44,atk:12,mag:10,def:2,weak:'ice',res:'fire',tier:2,anim:'bob',behavior:['enrage'],
   atks:[{n:'Rake',t:'phys',p:1.05},{n:'Fire Lash',t:'fire',p:1.3}]},
  {id:'wraith',name:'Grave Wraith',art:'ghost',col:{base:'#6a4a9a',hi:'#b088e8',eye:'#c8ff88'},dh:150,hp:56,atk:11,mag:15,def:3,weak:'fire',res:'dark',tier:3,fly:1,anim:'sway',behavior:['lifesteal'],
-  atks:[{n:'Grasp',t:'phys',p:1.1},{n:'Life Siphon',t:'dark',p:1.3},{n:'Frost Wail',t:'ice',p:1.2}]},
+  immune:['poison'],atks:[{n:'Grasp',t:'phys',p:1.1},{n:'Life Siphon',t:'dark',p:1.3},{n:'Frost Wail',t:'ice',p:1.2}]},
  {id:'ogre',name:'Battle Ogre',art:'goblin',col:{base:'#8a8478',hi:'#c4bca8',cloth:'#4a3420'},dh:168,hp:92,atk:18,mag:5,def:6,weak:'bolt',res:null,tier:3,anim:'lumber',behavior:['harden','enrage'],
   atks:[{n:'Club Smash',t:'phys',p:1.3},{n:'Bellow',t:'phys',p:1.1}]},
 ];
 // tougher single foes at rounds 3 & 7
 const MINIBOSSES=[
  {id:'gigas',name:'Gigas Brute',art:'golem',col:{base:'#7a6a58',hi:'#c0ac90',eye:'#ffd23a'},dh:200,hp:120,atk:18,mag:8,def:8,weak:'bolt',res:'phys',mini:1,anim:'lumber',behavior:['harden','enrage'],
-  atks:[{n:'Crushing Blow',t:'phys',p:1.35},{n:'Ground Pound',t:'phys',p:1.55}]},
+  immune:['poison'],taunt:'SMASH the little hero!',atks:[{n:'Crushing Blow',t:'phys',p:1.35},{n:'Ground Pound',t:'phys',p:1.55}]},
  {id:'chimera',name:'Chimera',art:'dragon',col:{base:'#8a5a9a',hi:'#c890e0',belly:'#e0c060',horn:'#301040'},dh:210,hp:110,atk:16,mag:16,def:5,weak:'ice',res:null,mini:1,anim:'bob',behavior:['enrage'],
-  atks:[{n:'Maul',t:'phys',p:1.25},{n:'Scorch',t:'fire',p:1.4},{n:'Rime Breath',t:'ice',p:1.4}]},
+  taunt:'Three deaths await you.',atks:[{n:'Maul',t:'phys',p:1.25},{n:'Scorch',t:'fire',p:1.4},{n:'Rime Breath',t:'ice',p:1.4}]},
 ];
-// gauntlet champion — transforms at half HP
-const CHAMPION=
- {id:'sovereign',name:'Arena Sovereign',art:'dragon',col:{base:'#e0b040',hi:'#fff0a0',belly:'#fff8d0',horn:'#5a3808'},dh:262,hp:230,atk:20,mag:20,def:7,weak:null,res:null,boss:1,anim:'bob',behavior:['enrage','heal_self'],
-  atks:[{n:'Royal Cleave',t:'phys',p:1.3},{n:'Sunfire Breath',t:'fire',p:1.55},{n:'Radiant Nova',t:'bolt',p:1.5}],
-  phase2:{id:'sovereign2',name:'Sovereign, Unbound',col:{base:'#c02860',hi:'#ff70a0',belly:'#ffd0e0',horn:'#400818'},
-    atks:[{n:'Doom Cleave',t:'phys',p:1.5},{n:'Hellfire',t:'fire',p:1.7},{n:'Void Nova',t:'dark',p:1.6}]}};
+// gauntlet champions — each transforms at half HP
+const CHAMPIONS=[
+ {id:'sovereign',name:'Arena Sovereign',art:'dragon',col:{base:'#e0b040',hi:'#fff0a0',belly:'#fff8d0',horn:'#5a3808'},dh:262,hp:230,atk:20,mag:20,def:7,weak:null,res:null,boss:1,anim:'bob',behavior:['enrage','heal_self'],immune:['poison'],
+  taunt:'None leave my arena alive.',atks:[{n:'Royal Cleave',t:'phys',p:1.3},{n:'Sunfire Breath',t:'fire',p:1.55,fx:'cone'},{n:'Radiant Nova',t:'bolt',p:1.5,fx:'ring'}],
+  phase2:{id:'sovereign2',name:'Sovereign, Unbound',cry:'THE SOVEREIGN UNBOUND!',col:{base:'#c02860',hi:'#ff70a0',belly:'#ffd0e0',horn:'#400818'},
+    atks:[{n:'Doom Cleave',t:'phys',p:1.5},{n:'Hellfire',t:'fire',p:1.7,fx:'cone'},{n:'Void Nova',t:'dark',p:1.6,fx:'ring'}]}},
+ {id:'colossus',name:'Void Colossus',art:'golem',col:{base:'#4a4468',hi:'#8a84b8',eye:'#c088ff'},dh:270,hp:270,atk:24,mag:12,def:10,weak:'bolt',res:'phys',boss:1,anim:'lumber',behavior:['harden','enrage'],immune:['poison','freeze'],
+  taunt:'The void hungers. Feed it.',atks:[{n:'Titan Fist',t:'phys',p:1.4},{n:'Gravity Crush',t:'dark',p:1.5},{n:'Seismic Slam',t:'phys',p:1.7,fx:'shock'}],
+  phase2:{id:'colossus2',name:'Colossus Awakened',cry:'THE COLOSSUS AWAKENS!',col:{base:'#7a2ca0',hi:'#c060ff',eye:'#ffe25a'},
+    atks:[{n:'Ruin Fist',t:'phys',p:1.6},{n:'Singularity',t:'dark',p:1.7},{n:'World Break',t:'phys',p:1.9,fx:'shock'}]}},
+ {id:'empress',name:'Frostwyrm Empress',art:'dragon',col:{base:'#3a7ac8',hi:'#a0d8ff',belly:'#e0f4ff',horn:'#204060'},dh:264,hp:250,atk:20,mag:24,def:7,weak:'fire',res:'ice',boss:1,anim:'bob',behavior:['enrage','heal_self'],immune:['freeze'],
+  taunt:'Kneel, and I shall make your end swift.',atks:[{n:'Rime Claw',t:'phys',p:1.3},{n:'Absolute Zero',t:'ice',p:1.6,fx:'cone'},{n:'Glacial Nova',t:'ice',p:1.5,fx:'ring'}],
+  phase2:{id:'empress2',name:'Empress Eternal',cry:'WINTER ETERNAL!',col:{base:'#c8e4ff',hi:'#ffffff',belly:'#e8f8ff',horn:'#6a8ab0'},
+    atks:[{n:'Frostbite',t:'phys',p:1.5},{n:'Diamond Dust',t:'ice',p:1.8,fx:'cone'},{n:'Permafrost',t:'ice',p:1.7,fx:'ring'}]}},
+];
+// unique named foes that can replace a normal spawn deeper in a run
+const UNIQUES=[
+ {base:'salamander',name:'Cinder, the Everburning',col:{base:'#ff3810',hi:'#ffd050',horn:'#400808',eye:'#fff2a0'},boostHp:1.7,boostAtk:1.3,bonusBP:180,anim:'bob',behavior:['enrage'],unique:1,dh:160,
+  atks:[{n:'Rake',t:'phys',p:1.1},{n:'Inferno Lash',t:'fire',p:1.45,fx:'cone'}]},
+ {base:'skel',name:'Sir Rattle',col:{base:'#f4f0d8',hi:'#ffffff',eye:'#ff4040'},boostHp:1.8,boostAtk:1.35,bonusBP:180,anim:'lumber',behavior:[],immune:['poison','freeze'],unique:1,dh:160,
+  atks:[{n:'Grave Cleaver',t:'phys',p:1.35},{n:'Hex',t:'dark',p:1.2}]},
+ {base:'wraith',name:'The Pale Widow',col:{base:'#8a3a8a',hi:'#e0a0e8',eye:'#c8ff88'},boostHp:1.7,boostAtk:1.3,bonusBP:200,anim:'sway',behavior:['lifesteal'],immune:['poison'],unique:1,dh:158,
+  atks:[{n:'Embrace',t:'phys',p:1.2},{n:'Soul Feast',t:'dark',p:1.45}]},
+ {base:'golem',name:'Old Mossback',col:{base:'#5a7a4a',hi:'#a0c890',eye:'#ffe25a'},boostHp:2.1,boostAtk:1.25,bonusBP:200,anim:'lumber',behavior:['harden','enrage'],immune:['poison'],unique:1,dh:168,
+  atks:[{n:'Mossy Slam',t:'phys',p:1.3},{n:'Spore Burst',t:'dark',p:1.35}]},
+];
+function makeUnique(u,m,cx,fy){
+  const baseType=[...ENEMY_TYPES].find(t=>t.id===u.base);
+  const t={...baseType,...u,name:u.name,hp:Math.round(baseType.hp*u.boostHp),atk:Math.round(baseType.atk*u.boostAtk)};
+  const e=makeEnemy(t,m,cx,fy,1);e.dh=u.dh||e.dh;e.bonusBP=u.bonusBP;e.unique=1;return e;
+}
+// elite affixes rolled onto mini-bosses
+const AFFIXES=[
+ {id:'vampiric',prefix:'Vampiric',apply:e=>{e.behavior=[...(e.behavior||[]),'lifesteal'];}},
+ {id:'frostbound',prefix:'Frostbound',apply:e=>{e.attackRider='freeze';e.col={...e.col,hi:'#bfeaff'};}},
+ {id:'blazing',prefix:'Blazing',apply:e=>{e.attackRider='burn';e.col={...e.col,hi:'#ffb070'};}},
+ {id:'explosive',prefix:'Explosive',apply:e=>{e.explosive=true;}},
+ {id:'swift',prefix:'Swift',apply:e=>{e.swift=true;}},
+ {id:'warded',prefix:'Warded',apply:e=>{e.immune=['freeze','stun','poison','burn'];}},
+];
 const BOSSES=[
  {id:'dragon',name:'Ruby Dragon',art:'dragon',col:{base:'#d83828',hi:'#ff7858',belly:'#f0c060',horn:'#3a1408'},dh:250,hp:150,atk:16,mag:16,def:5,weak:'ice',res:'fire',boss:1,anim:'bob',behavior:['enrage'],
-  atks:[{n:'Savage Bite',t:'phys',p:1.15},{n:'Flame Breath',t:'fire',p:1.5},{n:'Tail Sweep',t:'phys',p:1.3}]},
+  taunt:'Your ashes will feed my flame.',atks:[{n:'Savage Bite',t:'phys',p:1.15},{n:'Flame Breath',t:'fire',p:1.5},{n:'Tail Sweep',t:'phys',p:1.3}]},
  {id:'lich',name:'Lich King',art:'mage',col:{base:'#1e3a30',hi:'#4a7a64',orb:'#7cf0ff',hoodHi:'#3a6a58',eye:'#7cf0ff'},dh:240,hp:135,atk:12,mag:22,def:6,weak:'fire',res:'ice',boss:1,anim:'sway',behavior:['heal_self'],
-  atks:[{n:'Doom Scythe',t:'phys',p:1.2},{n:'Blizzaga',t:'ice',p:1.5},{n:'Soul Drain',t:'dark',p:1.35}]},
+  immune:['poison','freeze'],taunt:'Death is only the beginning of your suffering.',atks:[{n:'Doom Scythe',t:'phys',p:1.2},{n:'Blizzaga',t:'ice',p:1.5},{n:'Soul Drain',t:'dark',p:1.35}]},
  {id:'titan',name:'Iron Titan',art:'golem',col:{base:'#5a6478',hi:'#9aa4be',eye:'#ffe258'},dh:250,hp:170,atk:22,mag:8,def:9,weak:'bolt',res:'phys',boss:1,anim:'lumber',behavior:['harden','enrage'],
-  atks:[{n:'Meteor Fist',t:'phys',p:1.4},{n:'Earthshatter',t:'phys',p:1.7}]},
+  immune:['poison','freeze'],taunt:'You are dust before my iron.',atks:[{n:'Meteor Fist',t:'phys',p:1.4},{n:'Earthshatter',t:'phys',p:1.7}]},
 ];
 const SPELLS={
   fire:{name:'Fire',mp:6,pow:16,elem:'fire',target:'one',rider:'burn',riderChance:.25,desc:'Flame damage · may Burn'},
@@ -821,19 +923,28 @@ const SPELLS={
   bolt:{name:'Bolt',mp:6,pow:16,elem:'bolt',target:'one',rider:'stun',riderChance:.15,desc:'Lightning · may Stun'},
   cure:{name:'Cure',mp:8,pow:35,elem:'heal',target:'self',desc:'Restore 35+ HP'},
   bio:{name:'Bio',mp:10,pow:14,elem:'dark',target:'one',rider:'poison',riderChance:.85,desc:'Poisons the target'},
+  regen:{name:'Regen',mp:10,elem:'buff',target:'self',support:'regen',desc:'Regenerate HP for a few turns'},
   fira:{name:'Fira',mp:13,pow:34,elem:'fire',target:'one',rider:'burn',riderChance:.35,desc:'Heavy flame · may Burn'},
   blizzara:{name:'Blizzara',mp:13,pow:34,elem:'ice',target:'one',rider:'freeze',riderChance:.3,desc:'Heavy frost · may Freeze'},
   thundara:{name:'Thundara',mp:13,pow:34,elem:'bolt',target:'one',rider:'stun',riderChance:.22,desc:'Heavy bolt · may Stun'},
+  firestorm:{name:'Firestorm',mp:16,pow:28,elem:'fire',target:'pair',rider:'burn',riderChance:.3,desc:'Flame hits a foe + its neighbour'},
+  chainbolt:{name:'Chain Bolt',mp:16,pow:28,elem:'bolt',target:'pair',rider:'stun',riderChance:.2,desc:'Bolt arcs to two foes'},
   protect:{name:'Protect',mp:9,elem:'buff',target:'self',support:'defup',desc:'Raise your Defense'},
   valor:{name:'Valor',mp:9,elem:'buff',target:'self',support:'atkup',desc:'Raise your Attack'},
+  haste:{name:'Haste',mp:15,elem:'buff',target:'self',support:'haste',desc:'Act twice each turn for a while'},
   breakspell:{name:'Break',mp:11,elem:'buff',target:'one',support:'break',desc:'Lower a foe\'s Defense'},
+  silence:{name:'Silence',mp:11,elem:'buff',target:'one',support:'silence',desc:'Stop a foe from casting'},
   cura:{name:'Cura',mp:15,pow:80,elem:'heal',target:'self',desc:'Restore 80+ HP'},
+  doom:{name:'Doom',mp:18,elem:'buff',target:'one',support:'doom',desc:'A countdown to heavy damage'},
   firaga:{name:'Firaga',mp:24,pow:56,elem:'fire',target:'one',rider:'burn',riderChance:.5,desc:'Massive flame · may Burn'},
   blizzaga:{name:'Blizzaga',mp:24,pow:56,elem:'ice',target:'one',rider:'freeze',riderChance:.45,desc:'Massive frost · may Freeze'},
   thundaga:{name:'Thundaga',mp:24,pow:56,elem:'bolt',target:'one',rider:'stun',riderChance:.35,desc:'Massive bolt · may Stun'},
   meteor:{name:'Meteor',mp:20,pow:26,elem:'dark',target:'all',desc:'Strikes ALL enemies'},
   ultima:{name:'Ultima',mp:34,pow:52,elem:'ultima',target:'all',desc:'Non-elemental — ALL foes, ignores resistance'},
 };
+// each weapon tier carries an elemental affinity for basic Attacks
+const WEAPON_ELEM=['phys','phys','ice','fire','bolt'];
+const WEAPON_ELEM_NAME={phys:'',ice:'❄',fire:'🔥',bolt:'⚡'};
 const WEAPONS=[{n:'Bronze Sword',atk:0},{n:'Iron Sword',atk:7},{n:'Mythril Blade',atk:16},{n:'Flame Saber',atk:28},{n:'Excalibur',atk:42}];
 const ARMORS=[{n:'Traveler Garb',def:0},{n:'Chain Mail',def:4},{n:'Mythril Plate',def:8},{n:'Genji Armor',def:13},{n:'Aegis Plate',def:19}];
 const ITEMS={potion:{name:'Potion',desc:'Restores 45 HP'},ether:{name:'Ether',desc:'Restores 20 MP'}};
@@ -851,8 +962,19 @@ const WPN_STYLE=[
  {blade:'#ffbe58',guard:'#d08830',bladeLen:54,bladeGlow:'rgba(255,150,60,.75)'},
  {blade:'#ffffff',guard:'#ffe6a0',bladeLen:60,bladeGlow:'rgba(255,240,180,.9)'},
 ];
-function heroColor(arm,wpn){return {...HERO_TIERS[arm],...WPN_STYLE[wpn]};}
-function heroCI(arm,wpn){arm=arm==null?P.arm:arm;wpn=wpn==null?P.wpn:wpn;return creatureImg('hero',arm+'-'+wpn,heroColor(arm,wpn));}
+const CHARACTERS=[
+ {id:'knight',name:'Knight',blurb:'Balanced · sturdy · master of the blade',
+   maxhp:120,maxmp:26,atk:14,mag:9,critUp:0,spells:['fire'],limit:'riot',limitName:'RIOT BLADE',
+   accent:{cape:'#7a2a3a',plume:'#d83848',plumeHi:'#ff8090'}},
+ {id:'mage',name:'Sorceress',blurb:'Fragile · immense magic · elemental fury',
+   maxhp:88,maxmp:46,atk:9,mag:16,critUp:0,spells:['fire','ice'],limit:'ultima',limitName:'ASTRAL FLARE',
+   accent:{cape:'#3a2a7a',plume:'#8a5ad8',plumeHi:'#c8a0ff'}},
+ {id:'rogue',name:'Rogue',blurb:'Swift · lethal crits · relentless dance',
+   maxhp:100,maxmp:30,atk:15,mag:8,critUp:0.12,spells:['bolt'],limit:'dance',limitName:'BLADE DANCE',
+   accent:{cape:'#2a5a3a',plume:'#3aa060',plumeHi:'#8ce0a0'}},
+];
+function heroColor(arm,wpn,ch){return {...HERO_TIERS[arm],...WPN_STYLE[wpn],...((CHARACTERS[ch]||CHARACTERS[0]).accent)};}
+function heroCI(arm,wpn){arm=arm==null?P.arm:arm;wpn=wpn==null?P.wpn:wpn;const ch=chosenChar||0;return creatureImg('hero',arm+'-'+wpn+'-'+ch,heroColor(arm,wpn,ch));}
 function imgFor(e){return creatureImg(e.art,e.id,e.col);}
 
 /* ============================ THEMES / BACKDROPS ============================ */
@@ -873,63 +995,70 @@ const THEMES=[
 ];
 const ARENA_TI=6;
 const bgCache=[];
-function buildArena(c,x){
+const ARENA_SKINS=[
+ {wall:['#0a0414','#180628','#2a0838'],cA:'#ff46c8',cB:'#5cf0ff',
+  signs:[['#ff46c8',90,26,150],['#5cf0ff',300,20,120],['#ffe25a',470,26,150],['#5cf0ff',650,20,120],['#ff46c8',820,26,150]],
+  horizon:'rgba(255,70,200,.5)',hline:'#ff8ae0',floor:['#12061e','#04010a'],
+  gridH:'92,240,255',gridV:'255,70,200',ring1:'rgba(255,225,90,.5)',ring2:'rgba(255,70,200,.4)'},
+ {wall:['#02060f','#061426','#0a2438'],cA:'#4aa8ff',cB:'#40e0c8',
+  signs:[['#4aa8ff',90,26,150],['#40e0c8',300,20,120],['#a0e0ff',470,26,150],['#40e0c8',650,20,120],['#4aa8ff',820,26,150]],
+  horizon:'rgba(60,160,255,.5)',hline:'#7ac8ff',floor:['#04101e','#01060f'],
+  gridH:'80,200,255',gridV:'60,150,255',ring1:'rgba(160,220,255,.55)',ring2:'rgba(60,160,255,.4)'},
+];
+const arenaLayerCache=[];
+function arenaLayers(skin){
+  skin=skin||0;
+  if(arenaLayerCache[skin])return arenaLayerCache[skin];
+  const S=ARENA_SKINS[skin]||ARENA_SKINS[0];
   const HOR=H*.52;
-  // back wall — deep magenta/indigo gradient
-  const wg=x.createLinearGradient(0,0,0,HOR);
-  wg.addColorStop(0,'#0a0414');wg.addColorStop(.6,'#180628');wg.addColorStop(1,'#2a0838');
-  x.fillStyle=wg;x.fillRect(0,0,W,HOR);
-  // distant crowd suggestion: rows of dim dots
+  const far=document.createElement('canvas');far.width=W;far.height=H;const xf=far.getContext('2d');
+  const near=document.createElement('canvas');near.width=W;near.height=H;const xn=near.getContext('2d');
+  // ---- FAR: wall, crowd, signage, marquee, side vignette ----
+  const wg=xf.createLinearGradient(0,0,0,HOR);
+  wg.addColorStop(0,S.wall[0]);wg.addColorStop(.6,S.wall[1]);wg.addColorStop(1,S.wall[2]);
+  xf.fillStyle=wg;xf.fillRect(0,0,W,HOR+40);
   for(let r=0;r<5;r++){const yy=60+r*22;
     for(let cx=20;cx<W;cx+=18){
-      x.globalAlpha=.10+ .06*Math.sin(cx*.3+r);
-      x.fillStyle=r%2?'#5cf0ff':'#ff46c8';x.fillRect(cx+(r%2?9:0),yy,6,10);}}
-  x.globalAlpha=1;
-  // neon signage bars along the top
-  const signs=[['#ff46c8',90,26,150],['#5cf0ff',300,20,120],['#ffe25a',470,26,150],['#5cf0ff',650,20,120],['#ff46c8',820,26,150]];
-  x.filter='blur(1px)';
-  for(const[col,sx,h,w]of signs){
-    x.fillStyle=col;x.globalAlpha=.9;x.fillRect(sx,40,w,h);
-    x.globalAlpha=.35;x.fillRect(sx-6,34,w+12,h+12);
+      xf.globalAlpha=.10+.06*Math.sin(cx*.3+r);
+      xf.fillStyle=r%2?S.cB:S.cA;xf.fillRect(cx+(r%2?9:0),yy,6,10);}}
+  xf.globalAlpha=1;
+  xf.filter='blur(1px)';
+  for(const[col,sx,h,w]of S.signs){
+    xf.fillStyle=col;xf.globalAlpha=.9;xf.fillRect(sx,40,w,h);
+    xf.globalAlpha=.35;xf.fillRect(sx-6,34,w+12,h+12);
   }
-  x.filter='none';x.globalAlpha=1;
-  // marquee bulb strip under the signage
-  for(let bx=16;bx<W;bx+=26){x.fillStyle=(bx/26|0)%2?'#ffe25a':'#fff';
-    x.beginPath();x.arc(bx,86,3.4,0,Math.PI*2);x.fill();}
-  // horizon glow line
-  const hg=x.createLinearGradient(0,HOR-30,0,HOR+10);
-  hg.addColorStop(0,'rgba(0,0,0,0)');hg.addColorStop(1,'rgba(255,70,200,.5)');
-  x.fillStyle=hg;x.fillRect(0,HOR-30,W,40);
-  x.fillStyle='#ff8ae0';x.fillRect(0,HOR-2,W,3);
-  // arena floor — dark
-  const fg=x.createLinearGradient(0,HOR,0,H);
-  fg.addColorStop(0,'#12061e');fg.addColorStop(1,'#04010a');
-  x.fillStyle=fg;x.fillRect(0,HOR,W,H-HOR);
-  // perspective neon grid
-  const vpx=W/2;
-  x.lineWidth=2;
-  // horizontal lines receding
-  for(let i=0;i<=10;i++){
-    const t=i/10, yy=HOR + (H-HOR)*(t*t);
-    x.strokeStyle='rgba(92,240,255,'+(0.12+0.28*t)+')';
-    x.beginPath();x.moveTo(0,yy);x.lineTo(W,yy);x.stroke();
-  }
-  // converging verticals
-  for(let i=-7;i<=7;i++){
-    const fx=vpx+i*90;
-    x.strokeStyle='rgba(255,70,200,'+(0.10+0.20*(1-Math.abs(i)/8))+')';
-    x.beginPath();x.moveTo(vpx+i*10,HOR);x.lineTo(fx,H);x.stroke();
-  }
-  // center battle ring
-  x.strokeStyle='rgba(255,225,90,.5)';x.lineWidth=3;
-  x.save();x.translate(W/2,H*.70);x.scale(1,.34);
-  x.beginPath();x.arc(0,0,300,0,Math.PI*2);x.stroke();
-  x.strokeStyle='rgba(255,70,200,.4)';x.beginPath();x.arc(0,0,320,0,Math.PI*2);x.stroke();
-  x.restore();
-  // vignette-ish darken sides of wall
-  const sd=x.createLinearGradient(0,0,W,0);
+  xf.filter='none';xf.globalAlpha=1;
+  for(let bx=16;bx<W;bx+=26){xf.fillStyle=(bx/26|0)%2?'#ffe25a':'#fff';
+    xf.beginPath();xf.arc(bx,86,3.4,0,Math.PI*2);xf.fill();}
+  const sd=xf.createLinearGradient(0,0,W,0);
   sd.addColorStop(0,'rgba(0,0,0,.5)');sd.addColorStop(.5,'rgba(0,0,0,0)');sd.addColorStop(1,'rgba(0,0,0,.5)');
-  x.fillStyle=sd;x.fillRect(0,0,W,HOR);
+  xf.fillStyle=sd;xf.fillRect(0,0,W,HOR);
+  // ---- NEAR: horizon glow, floor, grid, ring (transparent above floor) ----
+  const hg=xn.createLinearGradient(0,HOR-30,0,HOR+10);
+  hg.addColorStop(0,'rgba(0,0,0,0)');hg.addColorStop(1,S.horizon);
+  xn.fillStyle=hg;xn.fillRect(0,HOR-30,W,40);
+  xn.fillStyle=S.hline;xn.fillRect(0,HOR-2,W,3);
+  const fg=xn.createLinearGradient(0,HOR,0,H);
+  fg.addColorStop(0,S.floor[0]);fg.addColorStop(1,S.floor[1]);
+  xn.fillStyle=fg;xn.fillRect(0,HOR,W,H-HOR);
+  const vpx=W/2;xn.lineWidth=2;
+  for(let i=0;i<=10;i++){const t=i/10,yy=HOR+(H-HOR)*(t*t);
+    xn.strokeStyle='rgba('+S.gridH+','+(0.12+0.28*t)+')';
+    xn.beginPath();xn.moveTo(0,yy);xn.lineTo(W,yy);xn.stroke();}
+  for(let i=-7;i<=7;i++){const fx=vpx+i*90;
+    xn.strokeStyle='rgba('+S.gridV+','+(0.10+0.20*(1-Math.abs(i)/8))+')';
+    xn.beginPath();xn.moveTo(vpx+i*10,HOR);xn.lineTo(fx,H);xn.stroke();}
+  xn.strokeStyle=S.ring1;xn.lineWidth=3;
+  xn.save();xn.translate(W/2,H*.70);xn.scale(1,.34);
+  xn.beginPath();xn.arc(0,0,300,0,Math.PI*2);xn.stroke();
+  xn.strokeStyle=S.ring2;xn.beginPath();xn.arc(0,0,320,0,Math.PI*2);xn.stroke();
+  xn.restore();
+  arenaLayerCache[skin]={far,near};
+  return arenaLayerCache[skin];
+}
+function buildArena(c,x){ // legacy single-image (used by boss card etc if needed)
+  const L=arenaLayers(CFG.arenaSkin||0);
+  x.drawImage(L.far,0,0);x.drawImage(L.near,0,0);
   return c;
 }
 function buildBG(ti){
@@ -1063,11 +1192,21 @@ let P=null,enemies=[],round=0,score=0,stats=null,theme=ARENA_TI,gameState='title
 let handicap=null,pendingHandicap=null,combo=0,battleMaxCombo=0,runMaxCombo=0,GAUNTLET=8;
 let bpShown=0; // rolled-up displayed BP
 function newPlayer(){
-  return{name:'CELES',maxhp:100,hp:100,maxmp:30,mp:30,atk:12,mag:11,limit:0,
-    wpn:0,arm:0,spells:['fire'],items:{potion:2,ether:1},defending:false,
+  const c=CHARACTERS[chosenChar]||CHARACTERS[0];
+  return{name:c.name.toUpperCase(),char:c.id,limitId:c.limit,limitName:c.limitName,
+    maxhp:c.maxhp,hp:c.maxhp,maxmp:c.maxmp,mp:c.maxmp,atk:c.atk,mag:c.mag,limit:0,critUp:c.critUp||0,
+    wpn:0,arm:0,spells:c.spells.slice(),items:{potion:2,ether:1},defending:false,
     cx:748,fy:360,dh:170,ox:0,oy:0,flash:0,hurt:0};
 }
-function gainLimit(n){if(!P)return;P.limit=clamp(P.limit+n,0,100);updateStatus();}
+function gainLimit(n){if(!P)return;if(P.relic==='haste')n*=1.4;P.limit=clamp(P.limit+n,0,100);updateStatus();}
+const RELICS={
+ regen:{icon:'💚',name:'Sage Ring',desc:'Regenerate 5% HP each turn'},
+ warding:{icon:'🧿',name:'Warding Charm',desc:'Immune to Freeze & Stun'},
+ vampiric:{icon:'🩸',name:'Vampire Fang',desc:'Heal 15% of the damage you deal'},
+ counter:{icon:'⚔',name:'Riposte Gauntlet',desc:'30% chance to counter melee'},
+ haste:{icon:'⏩',name:'Haste Feather',desc:'+40% Limit gain'},
+ fortune:{icon:'🪙',name:'Fortune Coin',desc:'+30 BP per foe felled'},
+};
 /* --- handicaps: a drawback applied to the NEXT battle --- */
 const HANDICAPS={
   frog:  {icon:'🐸',name:'Frog Curse',short:'Attack only',desc:'Only Attack — no Magic or Items'},
@@ -1116,23 +1255,29 @@ function makeBoon(tier){
     opts.push({id:'ether',icon:'🔮',name:'Ether',desc:'Add 1 Ether'});
     opts.push({id:'bp:120',icon:'🪙',name:'120 BP',desc:'A handful of Battle Points'});
   }
+  if(tier>=2){
+    // relic offer — swap or acquire (only one relic held)
+    const rk=Object.keys(RELICS).filter(k=>k!==P.relic);
+    if(rk.length){const r=pick(rk);opts.push({id:'relic:'+r,icon:RELICS[r].icon,name:RELICS[r].name,desc:'RELIC · '+RELICS[r].desc});}
+  }
   return opts.length?pick(opts):{id:'bp:150',icon:'🪙',name:'150 BP',desc:'Battle Points'};
 }
+let pendingFlourish=null;
 function applyBoon(id){
-  if(id==='wpn')P.wpn++;
-  else if(id==='arm')P.arm++;
-  else if(id.startsWith('spell:'))P.spells.push(id.split(':')[1]);
-  else if(id.startsWith('bp:')){const amt=+id.split(':')[1];score+=amt;bonusFloat('+'+amt+' BP');}
+  if(id==='wpn'){P.wpn++;pendingFlourish=['⚔ WEAPON UP!','#ffe25a'];}
+  else if(id==='arm'){P.arm++;pendingFlourish=['🛡 ARMOR UP!','#8cf0a0'];}
+  else if(id.startsWith('spell:')){P.spells.push(id.split(':')[1]);pendingFlourish=['✦ SPELL LEARNED!','#c8a0ff'];}
+  else if(id.startsWith('relic:')){P.relic=id.split(':')[1];pendingFlourish=[RELICS[P.relic].icon+' '+RELICS[P.relic].name.toUpperCase(),'#ff8ad0'];}
+  else if(id.startsWith('bp:')){const amt=+id.split(':')[1];score+=amt;}
   else if(id==='heal')P.hp=Math.min(P.maxhp,P.hp+Math.round(P.maxhp*.6));
-  else if(id==='maxhp'){P.maxhp+=25;P.hp=Math.min(P.maxhp,P.hp+25);}
-  else if(id==='maxhp40'){P.maxhp+=40;P.hp=P.maxhp;}
-  else if(id==='maxmp'){P.maxmp+=10;P.mp=Math.min(P.maxmp,P.mp+10);}
-  else if(id==='atk')P.atk+=4;
-  else if(id==='mag')P.mag+=4;
+  else if(id==='maxhp'){P.maxhp+=25;P.hp=Math.min(P.maxhp,P.hp+25);pendingFlourish=['❤ VITALITY UP!','#ff8ad0'];}
+  else if(id==='maxhp40'){P.maxhp+=40;P.hp=P.maxhp;pendingFlourish=['❤ GREATER VITALITY!','#ff8ad0'];}
+  else if(id==='maxmp'){P.maxmp+=10;P.mp=Math.min(P.maxmp,P.mp+10);pendingFlourish=['💠 WISDOM UP!','#8cb8ff'];}
+  else if(id==='atk'){P.atk+=4;pendingFlourish=['🗡 STRENGTH UP!','#ffd23a'];}
+  else if(id==='mag'){P.mag+=4;pendingFlourish=['🔯 SPIRIT UP!','#c8a0ff'];}
   else if(id==='potions')P.items.potion+=2;
   else if(id==='ether')P.items.ether+=1;
 }
-function bonusFloat(txt){/* placeholder, popups drawn on canvas only in battle */}
 
 /* --- combo & callouts --- */
 const calloutEl=$('#callout');
@@ -1210,9 +1355,19 @@ function render(dt){
   if(camHold>0)camHold-=dt;else camZoomTarget+=(1-camZoomTarget)*Math.min(1,dt*6);
   camZoom+=(camZoomTarget-camZoom)*Math.min(1,dt*10);
   ctx.save();
-  if(shake>0){shake-=dt*2.6;ctx.translate(rnd(-1,1)*shake*11,rnd(-1,1)*shake*11);}
+  let shx=0,shy=0;
+  if(shake>0){shake-=dt*2.6;shx=rnd(-1,1)*shake*11;shy=rnd(-1,1)*shake*11;}
   if(camZoom>1.001){ctx.translate(camFocusX,camFocusY);ctx.scale(camZoom,camZoom);ctx.translate(-camFocusX,-camFocusY);}
-  ctx.drawImage(buildBG(theme%THEMES.length),0,0);
+  if(th.arena){
+    const L=arenaLayers(CFG.arenaSkin||0);
+    // far layer drifts less than the foreground for depth
+    ctx.save();ctx.translate(shx*.35,shy*.35);ctx.drawImage(L.far,0,0);ctx.restore();
+    ctx.translate(shx,shy); // full shake for floor + entities
+    ctx.drawImage(L.near,0,0);
+  }else{
+    ctx.translate(shx,shy);
+    ctx.drawImage(buildBG(theme%THEMES.length),0,0);
+  }
   drawShafts(th);
   // ambient particles (behind characters)
   for(const p of ambient){
@@ -1270,6 +1425,11 @@ function render(dt){
     // status icons above the bar
     const si=statusIcons(e);
     if(si){ctx.font='13px serif';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.fillText(si,e.cx,by-6);}
+    // formation: mark guarded back-row foes
+    if(e.row==='back'&&enemies.some(x=>x.hp>0&&x.row==='front')){
+      ctx.font='11px serif';ctx.textAlign='left';ctx.globalAlpha=.85;
+      ctx.fillStyle='#9ab0d8';ctx.fillText('🛡',bx+bw+4,by+6);ctx.globalAlpha=1;
+    }
   }
   // target cursor + name
   if(targetMode&&targetList.length){
@@ -1354,6 +1514,40 @@ function render(dt){
     if(flashScreen.t<=0)flashScreen=null;}
   ctx.restore();
   postProcess(th);
+  drawTurnOrder();
+}
+function drawTurnOrder(){
+  if(gameState!=='battle'||!enemies)return;
+  const live=enemies.filter(e=>e.hp>0&&e.deadT===undefined);
+  if(live.length<2)return;
+  const seq=[{n:'YOU',you:1},...live.map(e=>({n:e.name.split(' ')[0],you:0}))];
+  ctx.save();
+  ctx.font='600 12px Marcellus, serif';ctx.textBaseline='middle';ctx.textAlign='left';
+  // measure
+  let total=0;const gap=ctx.measureText(' ▸ ').width;
+  const widths=seq.map(s=>ctx.measureText(s.n).width);
+  total=widths.reduce((a,b)=>a+b,0)+gap*(seq.length-1)+ctx.measureText('TURN  ').width;
+  let x=W/2-total/2, y=100;
+  // backing pill
+  ctx.fillStyle='rgba(6,8,16,.55)';
+  roundRectPath(ctx,x-12,y-13,total+24,26,8);ctx.fill();
+  ctx.fillStyle='#8a8478';ctx.fillText('TURN',x,y);x+=ctx.measureText('TURN  ').width;
+  for(let i=0;i<seq.length;i++){
+    ctx.fillStyle=seq[i].you?'#ffe25a':(i===1?'#ff8ad0':'#c8bca8');
+    ctx.fillText(seq[i].n,x,y);x+=widths[i];
+    if(i<seq.length-1){ctx.fillStyle='#5a6478';ctx.fillText(' ▸ ',x,y);x+=gap;}
+  }
+  ctx.restore();
+}
+function roundRectPath(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+function arenaTint(){
+  // magenta → cyan → gold → crimson as the run deepens; bosses skew hot
+  const pals=['#c838d8','#38c8d8','#d8b838','#d85838','#8a48e8'];
+  let idx=Math.floor(((round||1)-1)/2)%pals.length;
+  const enc=(typeof encounterType==='function')?encounterType():'normal';
+  if(enc==='boss'||enc==='mini')idx=3;
+  if(enc==='champion')return '#ffd23a';
+  return pals[idx];
 }
 function postProcess(th){
   // bloom: blurred bright copy, additive
@@ -1380,9 +1574,9 @@ function postProcess(th){
   ctx.drawImage(tiltC,0,0,W,H);
   ctx.restore();
   ctx.imageSmoothingEnabled=false;
-  // colour grade + vignette
+  // colour grade + vignette (arena hue shifts as the run deepens)
   ctx.save();ctx.globalCompositeOperation='overlay';ctx.globalAlpha=.14;
-  ctx.fillStyle=th.tint;ctx.fillRect(0,0,W,H);ctx.restore();
+  ctx.fillStyle=(th.arena&&gameState!=='title')?arenaTint():th.tint;ctx.fillRect(0,0,W,H);ctx.restore();
   ctx.drawImage(vignette(),0,0);
 }
 function heroSwordEmbers(){
@@ -1427,8 +1621,15 @@ function updateStatus(){
   $('#lbtxt').textContent=P.limit>=100?'MAX':Math.floor(P.limit)+'%';
   $('#lbbar').classList.toggle('full',P.limit>=100);
   $('#roundlbl').textContent=combo>=2?'COMBO ×'+combo:'BATTLE '+round;
-  $('#gear').textContent=WEAPONS[P.wpn].n+' · '+ARMORS[P.arm].n;
+  $('#gear').textContent=WEAPONS[P.wpn].n+' · '+ARMORS[P.arm].n+(P.relic?' · '+RELICS[P.relic].icon:'');
   updateRibbon();
+  // screen-space boss/elite health bar
+  const bb=$('#bossbar');
+  const big=enemies&&enemies.filter(e=>e.hp>0&&(e.boss||e.mini||e.unique||e.phased));
+  if(big&&big.length){const e=big[0];bb.classList.remove('hidden');
+    bb.querySelector('.bb-name').textContent=e.name;
+    bb.querySelector('.bb-track i').style.width=(e.hp/e.maxhp*100)+'%';}
+  else bb.classList.add('hidden');
   // handicap badge
   const hb=$('#hcbadge');
   if(handicap){const h=HANDICAPS[handicap];hb.innerHTML=h.icon+' '+h.name.toUpperCase()+' — '+h.short;hb.classList.remove('hidden');}
@@ -1521,27 +1722,41 @@ const STATUS={
   protect:{icon:'🛡️',turns:3,col:'#8cf0a0',name:'Protect'},
   focus: {icon:'⚔️',turns:3,col:'#ffd23a',name:'Focus'},
   defdown:{icon:'🔻',turns:3,col:'#ff8ad0',name:'Def Down'},
+  regen: {icon:'💚',heal:.08,turns:4,col:'#7ce07a',name:'Regen'},
+  haste: {icon:'⏩',turns:3,col:'#5cf0ff',name:'Haste'},
+  silence:{icon:'🔇',turns:3,col:'#c8b0ff',name:'Silence'},
+  doom:  {icon:'☠️',turns:3,col:'#c088ff',name:'Doom'},
 };
 function hasStatus(ent,n){return !!(ent&&ent.st&&ent.st[n]>0);}
 function applyStatus(ent,name){
   if(!ent)return;const d=STATUS[name];if(!d)return;
+  if(ent!==P&&ent.immune&&ent.immune.includes(name)){
+    const cc=enemyCenter(ent);addPopup(cc.x,cc.y-40,'IMMUNE','#9aa2b8');return;
+  }
+  if(ent===P&&P.relic==='warding'&&(name==='freeze'||name==='stun')){
+    addPopup(P.cx,P.fy-170,'🧿 WARDED','#8cf0a0');return;
+  }
   ent.st=ent.st||{};ent.st[name]=d.turns;
   const isP=ent===P;
   const px=isP?ent.cx:ent.cx, py=isP?ent.fy-170:enemyCenter(ent).y-46;
   addPopup(px,py,d.icon+' '+d.name,d.col);
 }
-// returns {skip, dot} — call at the START of the entity's turn
+// returns {skip, dot, heal, doom} — call at the START of the entity's turn
 function tickStatus(ent){
-  if(!ent||!ent.st)return{skip:false,dot:0};
-  let skip=false,dot=0;
+  if(!ent||!ent.st)return{skip:false,dot:0,heal:0,doom:0};
+  let skip=false,dot=0,heal=0,doom=0;
+  const maxhp=ent===P?P.maxhp:ent.maxhp;
   for(const k of Object.keys(ent.st)){
     if(ent.st[k]<=0){delete ent.st[k];continue;}
     const d=STATUS[k];if(!d){delete ent.st[k];continue;}
-    if(d.dot)dot+=Math.max(1,Math.round((ent===P?P.maxhp:ent.maxhp)*d.dot));
+    if(d.dot)dot+=Math.max(1,Math.round(maxhp*d.dot));
+    if(d.heal)heal+=Math.max(1,Math.round(maxhp*d.heal));
     if(d.skip)skip=true;
-    ent.st[k]--;if(ent.st[k]<=0)delete ent.st[k];
+    ent.st[k]--;
+    if(k==='doom'&&ent.st[k]<=0)doom+=Math.round(maxhp*.45); // countdown detonates
+    if(ent.st[k]<=0)delete ent.st[k];
   }
-  return{skip,dot};
+  return{skip,dot,heal,doom};
 }
 function statusIcons(ent){return ent&&ent.st?Object.keys(ent.st).filter(k=>ent.st[k]>0).map(k=>STATUS[k].icon).join(''):'';}
 
@@ -1568,6 +1783,7 @@ async function damageEnemy(e,dmg,elem,opts){
   const c=enemyCenter(e);
   if(final>=28||crit||mult>1)camPunch(crit?1.1:1.06,c.x,c.y);
   stats.dmgDealt+=final;score+=final;
+  if(P.relic==='vampiric'&&P.hp<P.maxhp){const h=Math.round(final*.15);if(h>0){P.hp=Math.min(P.maxhp,P.hp+h);P.flash=1;addPopup(P.cx,P.fy-150,'+'+h,'#90ff90');}}
   bumpCombo();
   if(mult>1){stats.weakHits=(stats.weakHits||0)+1;score+=15;}
   // status infliction (burn/freeze/poison riders)
@@ -1585,13 +1801,13 @@ async function damageEnemy(e,dmg,elem,opts){
   if(e.hp<=0){
     await sleep(240);
     SFX.die();
+    onEnemyDefeated(e,c,final,dmg*mult);
     e.deadT=1;
     const iv=setInterval(()=>{e.deadT-=.08;
       burst(c.x+rnd(-24,24),c.y+rnd(-24,24),['#ff6048','#ffa058','#fff'],3,60,-20,.5);
       if(e.deadT<=0){e.deadT=0;clearInterval(iv);}},40);
-    score+=25*round;
-    addPopup(c.x,c.y-70,'+'+(25*round),'#e8cc88');
     await sleep(520);
+    if(e.explosive)await explode(e,c);
   }else{
     // split: on first drop below half HP, spawn a smaller copy
     if(e.behavior&&e.behavior.includes('split')&&!e.hasSplit&&e.hp/e.maxhp<=.5&&enemies.filter(x=>x.hp>0).length<4){
@@ -1599,6 +1815,26 @@ async function damageEnemy(e,dmg,elem,opts){
     }
     await sleep(340);
   }
+}
+function onEnemyDefeated(e,c,killingBlow,rawDmg){
+  let bp=25*round+(e.bonusBP||0);
+  if(P.relic==='fortune')bp+=30;
+  // overkill bonus — big finishing blows pay extra
+  if(killingBlow>=e.maxhp*.4){bp+=Math.round(killingBlow);addPopup(c.x,c.y-96,'OVERKILL! +'+Math.round(killingBlow),'#ff8ad0');}
+  score+=bp;addPopup(c.x,c.y-70,'+'+bp,'#e8cc88');
+  LT.kills=(LT.kills||0)+1;
+  if(e.phase2||e.phased)LT.champions=(LT.champions||0)+1;
+  else if(e.boss)LT.bosses=(LT.bosses||0)+1;
+  saveLT();
+}
+async function explode(e,c){
+  callout('DEATH BURST!','#ff6048');flashScreen={c:'#ffb0a0',t:.4};SFX.fire();shake=1;
+  burst(c.x,c.y,['#ff6048','#ffb040','#fff'],30,140,20,.8);
+  await sleep(200);
+  const dmg=Math.max(6,Math.round((e.atkS||14)*1.1));
+  const before=P.hp;P.hp=Math.max(1,P.hp-dmg); // never lethal
+  P.hurt=1;addPopup(P.cx,P.fy-150,String(before-P.hp),'#ff7860',true);
+  updateStatus();await sleep(400);
 }
 async function splitEnemy(e){
   callout(e.name+' splits!','#7ce07a');
@@ -1653,23 +1889,47 @@ function spawnEnemies(){
   const enc=encounterType();
   const m=1+(round-1)*0.22;
   if(enc==='champion'){
-    enemies.push(makeEnemy(CHAMPION,1+(round-GAUNTLET)*0.05+ (round/GAUNTLET-1)*0.3+.0,250,372,1));
+    const ci=Math.floor(round/GAUNTLET)-1;
+    const champ=CHAMPIONS[ci%CHAMPIONS.length];
+    enemies.push(makeEnemy(champ,1+ci*0.35,250,372,1));
   }else if(enc==='boss'){
     const b=BOSSES[(Math.floor(round/5)-1)%BOSSES.length];
     enemies.push(makeEnemy(b,1+(round-1)*0.16,250,366,1));
   }else if(enc==='mini'){
     const b=MINIBOSSES[(Math.floor(round/4))%MINIBOSSES.length];
-    enemies.push(makeEnemy(b,1+(round-1)*0.14,250,366,1));
+    const e=makeEnemy(b,1+(round-1)*0.14,250,366,1);
+    // roll an elite affix
+    const af=pick(AFFIXES);af.apply(e);e.name=af.prefix+' '+e.name;e.affix=af.id;
+    enemies.push(e);
   }else{
     const maxTier=round<=3?1:round<=6?2:3;
     const n=round===1?1:round<=2?2:ri(2,3);
     const pool=ENEMY_TYPES.filter(t=>t.tier<=maxTier);
-    const spots=n===1?[[250,360,1.06]]
-      :n===2?[[178,340,.94],[302,364,1.06]]
-      :[[150,324,.86],[316,346,.98],[212,368,1.08]];
+    // [cx, fy, size, row] — back row sits higher/upstage
+    const spots=n===1?[[250,360,1.06,'front']]
+      :n===2?[[196,366,1.06,'front'],[300,326,.9,'back']]
+      :[[160,368,1.08,'front'],[262,370,1.02,'front'],[236,320,.86,'back']];
+    const casterIds=['mage','ghost','wraith'];
+    let uniqueSlot=(round>=4&&Math.random()<.16)?ri(0,n-1):-1;
+    // sort so casters prefer back-row slots
+    const backSlots=spots.map((s,i)=>[s,i]).filter(([s])=>s[3]==='back');
     for(let i=0;i<n;i++){
-      const t=pick(pool);
-      enemies.push(makeEnemy(t,m,spots[i][0],spots[i][1],spots[i][2]));
+      let e;
+      if(i===uniqueSlot){e=makeUnique(pick(UNIQUES),m,spots[i][0],spots[i][1]);}
+      else{let t=pick(pool);e=makeEnemy(t,m,spots[i][0],spots[i][1],spots[i][2]);}
+      e.row=spots[i][3];
+      enemies.push(e);
+    }
+    // if a caster ended up front while a bruiser is back, swap positions so casters hide
+    if(n>=2){
+      const front=enemies.filter(e=>e.row==='front'), back=enemies.filter(e=>e.row==='back');
+      const frontCaster=front.find(e=>casterIds.includes(e.id));
+      const backBruiser=back.find(e=>!casterIds.includes(e.id));
+      if(frontCaster&&backBruiser){
+        [frontCaster.cx,backBruiser.cx]=[backBruiser.cx,frontCaster.cx];
+        [frontCaster.fy,backBruiser.fy]=[backBruiser.fy,frontCaster.fy];
+        [frontCaster.row,backBruiser.row]=[backBruiser.row,frontCaster.row];
+      }
     }
   }
   theme=ARENA_TI; // Battle Square arena is the one true stage
@@ -1682,7 +1942,7 @@ function triggerPhase2(e){
   e.hp=Math.min(e.maxhp,e.hp+Math.round(e.maxhp*.25));
   e.charging=null;
   const c=enemyCenter(e);
-  callout('THE SOVEREIGN UNBOUND!','#ff46c8');
+  callout(p.cry||'IT TRANSFORMS!','#ff46c8');
   flashScreen={c:'#ffffff',t:.55};shake=1;camPunch(1.14,c.x,c.y);
   burst(c.x,c.y,['#ff46c8','#ffe25a','#fff','#ff70a0'],40,150,-20,1);
 }
@@ -1715,6 +1975,7 @@ async function startRound(){
   if(handicap==='silence')P.mp=0;
   updateStatus();clearMenu();
   gameState='battle';
+  if(round===1&&!LT.tut){await showTutorial();}
   const enc=encounterType();
   const isBoss=enc==='boss'||enc==='champion', isMini=enc==='mini';
   const heavy=isBoss||isMini;
@@ -1722,12 +1983,13 @@ async function startRound(){
   if(handicap){const h=HANDICAPS[handicap];await say(h.icon+' Handicap: '+h.name+' — '+h.desc,1500);clearMsg();}
   // boss / champion / mini intro card
   if(heavy){
-    const flair=enc==='champion'?'Master of the Battle Square':enc==='boss'?'A legend of the arena':'An elite challenger';
+    const flair=enemies[0].taunt||(enc==='champion'?'Master of the Battle Square':enc==='boss'?'A legend of the arena':'An elite challenger');
     await showBossCard(enemies[0],flair);
   }
   const names=enemies.map(e=>e.name).filter((v,i,a)=>a.indexOf(v)===i).join(', ');
   await say((heavy?'⚔ ':'')+names+(enemies.length>1?' appear!':' appears!'),1200);
   clearMsg();
+  if(pendingFlourish){callout(pendingFlourish[0],pendingFlourish[1]);SFX.powerup();pendingFlourish=null;await sleep(500);}
   startMusic(heavy?'boss':'battle');
   // Ambushed handicap: enemies get a free opening assault
   if(handicap==='dazed'){
@@ -1750,11 +2012,19 @@ function rootMenu(){
 async function playerTurn(){
   if(P.hp<=0)return;
   P.defending=false;
-  // damage-over-time: venom handicap + burn/poison statuses
-  let dot=0;
-  if(handicap==='venom')dot+=Math.max(1,Math.round(P.maxhp*.06));
   const ts=tickStatus(P);
-  dot+=ts.dot;
+  // regen status + Sage Ring relic healing
+  let heal=ts.heal||0;
+  if(P.relic==='regen'&&P.hp<P.maxhp)heal+=Math.round(P.maxhp*.05);
+  if(heal>0&&P.hp<P.maxhp){
+    P.hp=Math.min(P.maxhp,P.hp+heal);P.flash=1;
+    addPopup(P.cx,P.fy-150,'+'+heal,'#90ff90');glow(P.cx,P.fy-64,90,'rgba(140,255,150,.5)',.7);
+    updateStatus();await sleep(360);
+  }
+  // damage-over-time: venom handicap + burn/poison + doom detonation
+  let dot=ts.dot||0;
+  if(handicap==='venom')dot+=Math.max(1,Math.round(P.maxhp*.06));
+  if(ts.doom){callout('DOOM!','#c088ff');dot+=ts.doom;flashScreen={c:'#c088ff',t:.4};SFX.dark();}
   if(dot>0){
     P.hp=Math.max(0,P.hp-dot);
     addPopup(P.cx,P.fy-150,String(dot),'#c890ff');
@@ -1771,6 +2041,8 @@ async function playerTurn(){
     await enemyPhase();
     return;
   }
+  // Haste: grant a bonus action this turn
+  P.extraAction=hasStatus(P,'haste')?1:0;
   updateStatus();
   rootMenu();
 }
@@ -1825,8 +2097,14 @@ async function doAttack(t){
   SFX.slash();
   burst(c.x,c.y,['#ffffff','#c8dcff'],10,110,80,.4);
   const crit=Math.random()<0.12+(P.critUp||0);
-  const dmg=(pAtk()+rnd(0,4))*effAtkMult()-effDef(t)/2;
-  await damageEnemy(t,Math.max(2,dmg),'phys',{crit});
+  const wElem=WEAPON_ELEM[P.wpn]||'phys';
+  if(wElem!=='phys'){glow(c.x,c.y,60,ELEM_COL[wElem],.7);}
+  let dmg=(pAtk()+rnd(0,4))*effAtkMult()-effDef(t)/2;
+  // formation: back-row foes take reduced melee damage while the front line stands
+  const frontAlive=enemies.some(e=>e.hp>0&&e.row==='front');
+  const guarded=t.row==='back'&&frontAlive;
+  if(guarded){dmg*=.5;addPopup(c.x,c.y-58,'GUARDED','#9ab0d8');}
+  await damageEnemy(t,Math.max(2,dmg),wElem,{crit,physDef:true});
   gainLimit(crit?13:9);
   for(let i=8;i>0;i--){P.ox=dash*i/8;await sleep(14);}
   P.ox=0;
@@ -1845,7 +2123,11 @@ async function castSpell(id,t){
   if(sp.support){ // buffs / debuffs
     if(sp.support==='defup'){applyStatus(P,'protect');addPopup(P.cx,P.fy-150,'DEFENSE UP','#8cf0a0',true);glow(hc.x,hc.y,110,'rgba(140,255,150,.6)',1);P.flash=1;}
     else if(sp.support==='atkup'){applyStatus(P,'focus');addPopup(P.cx,P.fy-150,'ATTACK UP','#ffd23a',true);glow(hc.x,hc.y,110,'rgba(255,210,60,.6)',1);P.flash=1;}
+    else if(sp.support==='regen'){applyStatus(P,'regen');glow(hc.x,hc.y,110,'rgba(140,255,150,.6)',1);rise(hc.x,hc.y+20,['#c0ffb8','#7ce07a'],16);P.flash=1;}
+    else if(sp.support==='haste'){applyStatus(P,'haste');addPopup(P.cx,P.fy-150,'HASTE','#5cf0ff',true);glow(hc.x,hc.y,110,'rgba(120,240,255,.6)',1);P.flash=1;}
     else if(sp.support==='break'&&t){applyStatus(t,'defdown');const cc=enemyCenter(t);addPopup(cc.x,cc.y-24,'DEF DOWN','#ff8ad0');t.flash=1;}
+    else if(sp.support==='silence'&&t){applyStatus(t,'silence');const cc=enemyCenter(t);t.flash=1;}
+    else if(sp.support==='doom'&&t){applyStatus(t,'doom');const cc=enemyCenter(t);glow(cc.x,cc.y,90,'rgba(150,80,255,.7)',1);burst(cc.x,cc.y,['#c088ff','#7030c0','#301050'],18,90,-10,.7);t.flash=1;}
     SFX.powerup();updateStatus();await sleep(420);
   }else if(sp.elem==='heal'){
     await spellVFX('heal',hc.x,hc.y+20);
@@ -1862,6 +2144,14 @@ async function castSpell(id,t){
     for(const e of enemies.filter(e2=>e2.hp>0)){
       await damageEnemy(e,sp.pow+P.mag*.8+rnd(0,5),sp.elem,{inflict:sp.rider,inflictChance:sp.riderChance});
     }
+  }else if(sp.target==='pair'){
+    // target + nearest living neighbour
+    const targets=[t];
+    const others=enemies.filter(e=>e.hp>0&&e!==t);
+    if(others.length){others.sort((a,b)=>Math.abs(a.cx-t.cx)-Math.abs(b.cx-t.cx));targets.push(others[0]);}
+    for(const e of targets){const c=enemyCenter(e);spellVFX(sp.elem,c.x,c.y);}
+    await sleep(480);
+    for(const e of targets){await damageEnemy(e,sp.pow+P.mag*.85+rnd(0,5),sp.elem,{inflict:sp.rider,inflictChance:sp.riderChance});}
   }else{
     const c=enemyCenter(t);
     await spellVFX(sp.elem,c.x,c.y);
@@ -1901,50 +2191,84 @@ async function doDefend(){
 }
 async function doLimit(){
   stats.turns++;
-  P.limit=0;
-  callout('★ LIMIT BREAK ★','#ffe25a');
-  await say(P.name+' unleashes RIOT BLADE!',1000);
-  // charge-up flash on the hero
+  P.limit=0;LT.limits=(LT.limits||0)+1;saveLT();
   const hc=heroCenter();
+  callout('★ LIMIT BREAK ★','#ffe25a');
+  await say(P.name+' unleashes '+(P.limitName||'RIOT BLADE')+'!',1000);
   glow(hc.x,hc.y,150,'rgba(255,230,120,.9)',1);
   burst(hc.x,hc.y,['#fff2b0','#ffd23a','#ff8ad0','#fff'],26,120,-30,.8);
-  flashScreen={c:'#fff2c0',t:.4};
+  flashScreen={c:'#fff2c0',t:.4};camPunch(1.1,hc.x,hc.y);
   await sleep(420);
-  const live=()=>enemies.filter(e=>e.hp<=0?false:e.deadT===undefined);
-  const power=Math.round(pAtk()*1.1+P.mag*1.1+30);
-  // eight arcing slashes distributed across all living foes
-  for(let i=0;i<8;i++){
-    const foes=live();if(!foes.length)break;
-    const e=foes[i%foes.length];const c=enemyCenter(e);
-    slashes.push({x:c.x+rnd(-14,14),y:c.y+rnd(-14,14),t:1});
-    SFX.slash();punch(.05);
-    burst(c.x,c.y,['#fff','#ffe25a','#ff8ad0'],8,120,60,.35);
-    flashScreen={c:'#ffe8b0',t:.18};
-    await damageEnemy(e,power*rnd(.55,.8),'phys'); // ignores element quirks, always heavy
-    await sleep(90);
-  }
-  // final shockwave hits everything
-  const rest=live();
-  if(rest.length){
-    flashScreen={c:'#ffffff',t:.5};SFX.fanfare();shake=1;
-    for(const e of rest){const c=enemyCenter(e);burst(c.x,c.y,['#fff','#ffd23a'],14,150,40,.5);
-      await damageEnemy(e,power*1.1,'phys');}
+  const live=()=>enemies.filter(e=>e.hp>0&&e.deadT===undefined);
+  const tier=P.wpn; // weapon tier scales the limit
+  if(P.limitId==='ultima'){
+    // Sorceress — Astral Flare: colossal non-elemental nova on all foes
+    const power=Math.round(P.mag*2.2+40+tier*10);
+    flashScreen={c:'#c0ffe8',t:.6};SFX.dark();shake=1;
+    for(const e of live()){const c=enemyCenter(e);glow(c.x,c.y,120,'rgba(140,255,220,.8)',1);}
+    await sleep(300);
+    const waves=2+Math.floor(tier/2);
+    for(let w=0;w<waves;w++){
+      for(const e of live()){const c=enemyCenter(e);
+        burst(c.x,c.y,['#b0ffe0','#60d0b0','#fff','#40a088'],14,130,-10,.6);
+        await damageEnemy(e,power*rnd(.5,.7),'ultima');}
+      flashScreen={c:'#e0fff4',t:.35};await sleep(120);
+    }
+  }else if(P.limitId==='dance'){
+    // Rogue — Blade Dance: a flurry of high-crit strikes
+    const power=Math.round(pAtk()*0.9+18+tier*6);
+    const hits=9+tier*2;
+    for(let i=0;i<hits;i++){
+      const foes=live();if(!foes.length)break;
+      const e=pick(foes);const c=enemyCenter(e);
+      slashes.push({x:c.x+rnd(-18,18),y:c.y+rnd(-18,18),t:1});
+      SFX.slash();punch(.04);burst(c.x,c.y,['#8ce0a0','#fff','#ffe25a'],6,110,50,.3);
+      await damageEnemy(e,power*rnd(.6,.85),'phys',{crit:Math.random()<.6});
+      await sleep(70);
+    }
+  }else{
+    // Knight — Riot Blade: distributed heavy slashes + shockwave
+    const power=Math.round(pAtk()*1.15+P.mag*0.6+30+tier*8);
+    const hits=6+tier;
+    for(let i=0;i<hits;i++){
+      const foes=live();if(!foes.length)break;
+      const e=foes[i%foes.length];const c=enemyCenter(e);
+      slashes.push({x:c.x+rnd(-14,14),y:c.y+rnd(-14,14),t:1});
+      SFX.slash();punch(.05);burst(c.x,c.y,['#fff','#ffe25a','#ff8ad0'],8,120,60,.35);
+      flashScreen={c:'#ffe8b0',t:.18};
+      await damageEnemy(e,power*rnd(.55,.8),'phys');
+      await sleep(90);
+    }
+    const rest=live();
+    if(rest.length){flashScreen={c:'#ffffff',t:.5};SFX.fanfare();shake=1;
+      for(const e of rest){const c=enemyCenter(e);burst(c.x,c.y,['#fff','#ffd23a'],14,150,40,.5);
+        await damageEnemy(e,power*1.1,'phys');}}
   }
   clearMsg();updateStatus();
   await endPlayerAction();
 }
 async function endPlayerAction(){
   if(enemies.every(e=>e.hp<=0)){await roundWon();return;}
+  // Haste: take a second action before the enemies move
+  if(P.extraAction>0&&P.hp>0){
+    P.extraAction--;
+    callout('HASTE — extra action!','#5cf0ff');
+    await sleep(300);
+    rootMenu();
+    return;
+  }
   await enemyPhase();
 }
 async function enemyPhase(opening){
   for(const e of enemies){
     if(e.hp<=0)continue;
-    // status ticks (burn/poison DoT, freeze/stun skip)
+    // status ticks (burn/poison DoT + doom, freeze/stun skip)
     const ts=tickStatus(e);
-    if(ts.dot){
-      e.hp=Math.max(0,e.hp-ts.dot);const cc=enemyCenter(e);
-      addPopup(cc.x,cc.y-24,String(ts.dot),'#c890ff');e.flash=1;
+    let edot=ts.dot||0;
+    if(ts.doom){const cc=enemyCenter(e);callout('DOOM!','#c088ff');edot+=ts.doom;burst(cc.x,cc.y,['#c088ff','#7030c0','#301050'],24,110,-10,.9);SFX.dark();}
+    if(edot){
+      e.hp=Math.max(0,e.hp-edot);const cc=enemyCenter(e);
+      addPopup(cc.x,cc.y-24,String(edot),'#c890ff');e.flash=1;
       burst(cc.x,cc.y,['#b070f0','#7030c0'],8,60,20,.4);
       updateStatus();await sleep(360);
       if(e.hp<=0){await enemyPerish(e);continue;}
@@ -1952,6 +2276,7 @@ async function enemyPhase(opening){
     if(ts.skip){
       await say(e.name+' is frozen solid!',720);clearMsg();continue;
     }
+    const silenced=hasStatus(e,'silence');
     // release a telegraphed charge from last turn
     if(e.charging){
       const move=e.charging;e.charging=null;
@@ -1964,6 +2289,8 @@ async function enemyPhase(opening){
       if(P.hp<=0){await gameOver();return;}
       await sleep(120);continue;
     }
+    // caster behaviours are blocked by Silence
+    if(!silenced){
     // heal_ally
     if(e.behavior&&e.behavior.includes('heal_ally')){
       const hurt=enemies.filter(x=>x.hp>0&&x!==e&&x.hp/x.maxhp<.55).sort((a,b)=>a.hp/a.maxhp-b.hp/b.maxhp)[0];
@@ -2001,48 +2328,89 @@ async function enemyPhase(opening){
       callout('⚠ CHARGING','#ff8858');
       await sleep(700);clearMsg();continue;
     }
-    // normal attack with wind-up + lunge
-    const atk=pick(e.atks);
-    await say(e.name+' — '+atk.n+'!',540);
-    for(let i=0;i<4;i++){e.ox=-4*(i+1)/4;await sleep(13);}      // wind-up
-    for(let i=0;i<6;i++){const t=1-Math.pow(1-(i+1)/6,2);e.ox=-4+(58)*t;e.oy=-Math.sin(t*Math.PI)*10;await sleep(14);} // lunge
-    const rage=e.enraged?1.4:1;
-    let dealt;
-    if(atk.t==='phys'){
-      SFX.slash();slashes.push({x:P.cx-16,y:P.fy-66,t:1});
-      dealt=e.atkS*atk.p*enemyDmgMult()*rage;await damagePlayer(dealt,'phys');
-    }else{
-      await spellVFX(atk.t,P.cx,P.fy-66);
-      dealt=e.magS*atk.p*enemyDmgMult()*rage;await damagePlayer(dealt,atk.t);
+    }else if(Math.random()<.5){
+      // a silenced caster fumbles
+      await say(e.name+' is silenced!',620);clearMsg();
     }
-    // elemental attacks may inflict a status on the player
-    if(P.hp>0){
-      if(atk.t==='fire'&&Math.random()<.28)applyStatus(P,'burn');
-      else if(atk.t==='ice'&&Math.random()<.24)applyStatus(P,'freeze');
-      else if(atk.t==='bolt'&&Math.random()<.18)applyStatus(P,'stun');
-      else if(atk.t==='dark'&&Math.random()<.22)applyStatus(P,'poison');
-      updateStatus();
-    }
-    // lifesteal
-    if(e.behavior&&e.behavior.includes('lifesteal')&&e.hp>0){
-      const drain=Math.round(dealt*.4);e.hp=Math.min(e.maxhp,e.hp+drain);
-      const cc=enemyCenter(e);addPopup(cc.x,cc.y-24,'+'+drain,'#ff8ad0');e.flash=1;
-    }
-    for(let i=6;i>0;i--){e.ox=(58)*i/6;e.oy=0;await sleep(12);}
-    e.ox=0;e.oy=0;
-    clearMsg();
+    // normal attack (with swift double-strike support)
+    await enemyStrike(e);
     if(P.hp<=0){await gameOver();return;}
+    if(e.swift&&e.hp>0&&P.hp>0){
+      await say(e.name+' strikes again!',560);
+      await enemyStrike(e);
+      if(P.hp<=0){await gameOver();return;}
+    }
+    clearMsg();
     await sleep(120);
   }
   if(opening){await say('Now — strike back!',800);clearMsg();}
   playerTurn();
 }
+async function enemyStrike(e){
+  let pool=e.atks;
+  if(hasStatus(e,'silence')){const phys=e.atks.filter(a=>a.t==='phys');if(phys.length)pool=phys;}
+  const atk=pick(pool);
+  await say(e.name+' — '+atk.n+'!',540);
+  for(let i=0;i<4;i++){e.ox=-4*(i+1)/4;await sleep(13);}      // wind-up
+  for(let i=0;i<6;i++){const t=1-Math.pow(1-(i+1)/6,2);e.ox=-4+(58)*t;e.oy=-Math.sin(t*Math.PI)*10;await sleep(14);} // lunge
+  if(atk.fx)playAttackFX(atk.fx,atk.t);
+  const rage=e.enraged?1.4:1;
+  let dealt;
+  if(atk.t==='phys'){
+    SFX.slash();slashes.push({x:P.cx-16,y:P.fy-66,t:1});
+    dealt=e.atkS*atk.p*enemyDmgMult()*rage;await damagePlayer(dealt,'phys');
+    // Riposte relic: chance to counter a melee blow
+    if(P.relic==='counter'&&P.hp>0&&e.hp>0&&Math.random()<.3){
+      await say(P.name+' counters!',600);
+      const cc=enemyCenter(e);slashes.push({x:cc.x,y:cc.y,t:1});SFX.slash();
+      await damageEnemy(e,pAtk()*.6+8,'phys');clearMsg();
+    }
+  }else{
+    if(!atk.fx)await spellVFX(atk.t,P.cx,P.fy-66);
+    dealt=e.magS*atk.p*enemyDmgMult()*rage;await damagePlayer(dealt,atk.t);
+  }
+  // status riders — from element and from any elite affix
+  if(P.hp>0){
+    if(atk.t==='fire'&&Math.random()<.28)applyStatus(P,'burn');
+    else if(atk.t==='ice'&&Math.random()<.24)applyStatus(P,'freeze');
+    else if(atk.t==='bolt'&&Math.random()<.18)applyStatus(P,'stun');
+    else if(atk.t==='dark'&&Math.random()<.22)applyStatus(P,'poison');
+    if(e.attackRider&&Math.random()<.4)applyStatus(P,e.attackRider);
+    updateStatus();
+  }
+  if(e.behavior&&e.behavior.includes('lifesteal')&&e.hp>0){
+    const drain=Math.round(dealt*.4);e.hp=Math.min(e.maxhp,e.hp+drain);
+    const cc=enemyCenter(e);addPopup(cc.x,cc.y-24,'+'+drain,'#ff8ad0');e.flash=1;
+  }
+  for(let i=6;i>0;i--){e.ox=(58)*i/6;e.oy=0;await sleep(12);}
+  e.ox=0;e.oy=0;
+}
+// signature attack visuals
+function playAttackFX(fx,elem){
+  const col=ELEM_COL[elem]||'#fff';
+  if(fx==='cone'){ // breath cone toward the hero
+    SFX.fire();flashScreen={c:col,t:.4};
+    for(let i=0;i<28;i++){const t=i/28;particles.push({x:250+t*(P.cx-250),y:300+rnd(-40*t,40*t),
+      vx:rnd(60,160),vy:rnd(-40,40),g:0,t:.5,c:pick([col,'#fff','#ffd070']),sz:rnd(3,7),gl:true});}
+    camPunch(1.08,P.cx,P.fy-70);
+  }else if(fx==='ring'){ // nova expanding ring
+    SFX.bolt();flashScreen={c:col,t:.45};
+    for(let i=0;i<40;i++){const a=i/40*Math.PI*2;particles.push({x:P.cx,y:P.fy-70,vx:Math.cos(a)*140,vy:Math.sin(a)*140,g:0,t:.45,c:col,sz:5,gl:true});}
+    camPunch(1.1,P.cx,P.fy-70);
+  }else if(fx==='shock'){ // ground shockwave
+    SFX.hit();shake=1;flashScreen={c:'#ffe0a0',t:.3};
+    for(let i=0;i<30;i++){particles.push({x:P.cx+rnd(-40,40),y:P.fy,vx:rnd(-120,120),vy:rnd(-160,-40),g:300,t:.6,c:pick(['#c8a060','#8a6a40','#fff']),sz:rnd(3,6),gl:false});}
+    camPunch(1.09,P.cx,P.fy);
+  }
+}
 async function enemyPerish(e){
-  const c=enemyCenter(e);SFX.die();e.deadT=1;
+  const c=enemyCenter(e);SFX.die();
+  onEnemyDefeated(e,c,e.maxhp,e.maxhp);
+  e.deadT=1;
   const iv=setInterval(()=>{e.deadT-=.08;burst(c.x+rnd(-24,24),c.y+rnd(-24,24),['#ff6048','#ffa058','#fff'],3,60,-20,.5);
     if(e.deadT<=0){e.deadT=0;clearInterval(iv);}},40);
-  score+=25*round;addPopup(c.x,c.y-70,'+'+(25*round),'#e8cc88');
   await sleep(400);
+  if(e.explosive)await explode(e,c);
   if(enemies.every(x=>x.hp<=0)){await roundWon();}
 }
 async function roundWon(){
@@ -2051,24 +2419,36 @@ async function roundWon(){
   callout('VICTORY!','#ffe25a');
   await say('Battle '+round+' won!',900);
   clearMsg();
+  // flawless streak across battles
+  if(bstat.noHit)flawlessStreak=(flawlessStreak||0)+1;else flawlessStreak=0;
   // ---- Battle Point breakdown (FF7 Battle Square style) ----
   const hpPct=P.hp/P.maxhp;
   const lines=[];
   const base=100+round*40; lines.push(['Battle cleared','+'+base]); 
   const hpB=Math.round(hpPct*100)*2; lines.push(['HP remaining ('+Math.round(hpPct*100)+'%)','+'+hpB]);
-  let flawless=0,itemfree=0,styleB=0,hcB=0;
+  let flawless=0,itemfree=0,styleB=0,hcB=0,streakB=0;
   if(bstat.noHit){flawless=150;lines.push(['Flawless — no damage','+150']);}
+  if(flawlessStreak>=2){streakB=flawlessStreak*60;lines.push(['Flawless streak ×'+flawlessStreak,'+'+streakB]);}
   if(bstat.items===0){itemfree=80;lines.push(['No items used','+80']);}
   if(battleMaxCombo>=3){styleB=battleMaxCombo*20;lines.push(['Style · combo ×'+battleMaxCombo,'+'+styleB]);}
   if(handicapCleared){hcB=140;lines.push(['Handicap defied','+140']);}
-  const total=base+hpB+flawless+itemfree+styleB+hcB;
+  const total=base+hpB+flawless+itemfree+styleB+hcB+streakB;
+  // lifetime stats + achievements
+  LT.battlesWon=(LT.battlesWon||0)+1;
+  LT.bestCombo=Math.max(LT.bestCombo||0,battleMaxCombo);
+  LT.maxRound=Math.max(LT.maxRound||0,round);
+  if(round===GAUNTLET)LT.gauntlets=(LT.gauntlets||0)+1;
+  saveLT();
+  const newAch=checkAchievements();
   await showBPReceipt(lines,total);
   score+=total;updateStatus();
+  for(const a of newAch){callout('🏆 '+a.name,'#ffd23a');SFX.fanfare();await sleep(900);}
   // ---- gauntlet milestone ----
   if(round===GAUNTLET){await gauntletClear();}
   // ---- the slot ----
   await showSlot();
 }
+let flawlessStreak=0;
 let handicapCleared=false;
 async function showBPReceipt(lines,total){
   gameState='receipt';
@@ -2218,7 +2598,7 @@ function applyShopToPlayer(){
   if(o.atk)P.atk+=4;
   if(o.mag)P.mag+=4;
   if(o.spell){if(!P.spells.includes('ice'))P.spells.push('ice');if(!P.spells.includes('bolt'))P.spells.push('bolt');}
-  if(o.crit)P.critUp=0.08;
+  if(o.crit)P.critUp=(P.critUp||0)+0.08;
   if(o.headstart)P.limit=30;
   if(o.revive)P.revive=true;
 }
@@ -2256,6 +2636,7 @@ function showTitle(){
   $('#ribbon').classList.add('hidden');
   $('#hcbadge').classList.add('hidden');
   $('#pausebtn').classList.add('hidden');
+  $('#bossbar').classList.add('hidden');
   sheet.innerHTML=
    '<div class="slot-title" style="font-size:clamp(13px,2.6vmin,20px);letter-spacing:.4em;margin-bottom:0">☆ THE GOLD SAUCER ☆</div>'+
    '<div class="title-big">BATTLE SQUARE</div>'+
@@ -2263,13 +2644,50 @@ function showTitle(){
    '<div class="subtitle">One fighter. Eight battles. The reels decide your curse —<br><span style="color:#5cf0ff">you decide how to beat it.</span></div>'+
    '<button class="mbtn" id="bStart">Enter the Arena</button>'+
    '<button class="mbtn" id="bScores">Hall of Champions</button>'+
+   '<button class="mbtn" id="bAch">Achievements</button>'+
    '<button class="mbtn" id="bShop">BP Emporium</button>'+
    '<button class="mbtn" id="bSettings">Settings</button>'+
    '<div class="subtitle" style="margin-top:3%;font-size:clamp(11px,1.9vmin,15px)">↑ ↓ move · Enter confirm · Esc back — or simply tap</div>';
-  $('#bStart').addEventListener('click',()=>{SFX.ok();startGame();});
+  $('#bStart').addEventListener('click',()=>{SFX.ok();showCharSelect();});
   $('#bScores').addEventListener('click',async()=>{SFX.ok();showScores();});
+  $('#bAch').addEventListener('click',()=>{SFX.ok();showAchievements();});
   $('#bShop').addEventListener('click',()=>{SFX.ok();openShop();});
   $('#bSettings').addEventListener('click',()=>{SFX.ok();openSettings(showTitle);});
+  showOverlay();
+}
+function showCharSelect(){
+  gameState='charselect';
+  const cards=CHARACTERS.map((c,i)=>{
+    const stats='HP '+c.maxhp+' · MP '+c.maxmp+' · ATK '+c.atk+' · MAG '+c.mag+(c.critUp?' · CRIT+':'');
+    return '<button class="card" data-i="'+i+'"><span class="cicon">'+['🛡️','🔮','🗡️'][i]+'</span>'+
+      '<span class="cname">'+c.name+'</span>'+c.blurb+
+      '<div style="margin-top:6%;font-size:.85em;color:#9aa2b8">'+stats+'</div>'+
+      '<div style="margin-top:4%;color:#ffd23a;font-size:.85em">★ '+c.limitName+'</div></button>';
+  }).join('');
+  sheet.innerHTML='<div class="slot-title" style="font-size:clamp(16px,3.6vmin,28px)">CHOOSE YOUR CHAMPION</div><hr class="rule">'+
+    '<div class="cards">'+cards+'</div>'+
+    '<button class="mbtn" id="csBack" style="margin-top:2.5%">‹ Back</button>';
+  sheet.querySelectorAll('button[data-i]').forEach(b=>{
+    b.addEventListener('mouseenter',()=>SFX.move());
+    b.addEventListener('click',()=>{SFX.ok();startGame(+b.dataset.i);});
+  });
+  $('#csBack').addEventListener('click',()=>{SFX.back();showTitle();});
+  showOverlay();
+}
+function showAchievements(){
+  gameState='achievements';
+  const rows=ACHIEVEMENTS.map(a=>{
+    const got=!!LT.ach[a.id];
+    return '<div class="setrow" style="margin:1.4% 6%;opacity:'+(got?1:.5)+'"><span>'+a.icon+' <b style="color:'+(got?'#ffd23a':'#8a8478')+'">'+a.name+'</b> — '+a.desc+'</span><span>'+(got?'✓':'—')+'</span></div>';
+  }).join('');
+  const stat=(l,v)=>'<div class="sumrow" style="margin:.5% 10%"><span>'+l+'</span><b>'+v+'</b></div>';
+  sheet.innerHTML='<div class="slot-title" style="font-size:clamp(16px,3.6vmin,28px)">ACHIEVEMENTS</div><hr class="rule">'+
+    rows+'<hr class="rule">'+
+    stat('Runs played',LT.runs||0)+stat('Battles won',LT.battlesWon||0)+stat('Foes defeated',LT.kills||0)+
+    stat('Bosses felled',(LT.bosses||0)+(LT.champions||0))+stat('Gauntlets cleared',LT.gauntlets||0)+
+    stat('Best combo','×'+(LT.bestCombo||0))+stat('Best run',(LT.bestBP||0)+' BP')+
+    '<button class="mbtn" id="aBack">‹ Back</button>';
+  $('#aBack').addEventListener('click',()=>{SFX.back();showTitle();});
   showOverlay();
 }
 async function showScores(){
@@ -2281,11 +2699,13 @@ async function showScores(){
     '<button class="mbtn" id="bBack">‹ Back</button>';
   $('#bBack').addEventListener('click',()=>{SFX.back();showTitle();});
 }
-function startGame(){
+function startGame(charIdx){
+  if(charIdx!=null)chosenChar=charIdx;
   P=newPlayer();round=0;score=0;bpShown=0;
   handicap=null;pendingHandicap=null;handicapCleared=false;
-  P.limit=0;P.critUp=0;P.revive=false;
+  P.limit=0;P.revive=false;P.relic=null;flawlessStreak=0;
   applyShopToPlayer();
+  LT.runs=(LT.runs||0)+1;saveLT();
   combo=0;battleMaxCombo=0;runMaxCombo=0;
   stats={rounds:0,dmgDealt:0,dmgTaken:0,turns:0,spells:0,weakHits:0};
   particles=[];popups=[];slashes=[];boltsV=[];ambient=[];
@@ -2317,12 +2737,14 @@ async function gameOver(){
   paused=false;closeModal();
   $('#pausebtn').classList.add('hidden');
   $('#hcbadge').classList.add('hidden');
+  $('#bossbar').classList.add('hidden');
   SFX.gameover();
   burst(P.cx,P.fy-66,['#ff6048','#902020','#ffffff'],36,140,120,1.1);
   await say(P.name+' has fallen…',1600);
   clearMsg();
   // bank the run's Battle Points for the Emporium
   SHOP.bank+=score;saveShop();
+  LT.deaths=(LT.deaths||0)+1;LT.bestBP=Math.max(LT.bestBP||0,score);LT.totalBP=(LT.totalBP||0)+score;LT.maxRound=Math.max(LT.maxRound||0,round-1);saveLT();checkAchievements();
   const entry={score,rounds:round-1,date:new Date().toLocaleDateString()};
   const scores=await saveScore(entry);
   const rank=scores.findIndex(s=>s===entry)+1;
