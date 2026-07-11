@@ -28,10 +28,17 @@
     --hp:#7ce07a; --mp:#7aa8f0;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{margin:0;padding:0;height:100%;background:#05060a;overflow:hidden;}
+  html,body{margin:0;padding:0;background:#05060a;
+       width:100%;height:100%;height:100dvh;
+       overflow:hidden;overscroll-behavior:none;
+       position:fixed;inset:0;
+       touch-action:manipulation;-webkit-text-size-adjust:100%;}
   body{display:flex;align-items:center;justify-content:center;
        font-family:'Cormorant Garamond',Georgia,serif;color:#e8e2d4;}
-  #game{position:relative;width:min(100vw,calc(100vh*16/9));aspect-ratio:16/9;
+  #game{position:relative;aspect-ratio:16/9;
+        width:min(100vw,calc(100vh*16/9));
+        width:min(100dvw,calc(100dvh*16/9));
+        max-height:100dvh;
         box-shadow:0 0 80px rgba(0,0,0,.9);}
   #cv{position:absolute;inset:0;width:100%;height:100%;}
 
@@ -43,7 +50,7 @@
          background:var(--gold);transform:rotate(45deg);}
   .panel::before{top:-4px;left:-4px;} .panel::after{bottom:-4px;right:-4px;}
 
-  #cmdwin{position:absolute;left:2.2%;bottom:2.6%;width:24%;min-height:19%;max-height:34%;overflow-y:auto;padding:1.1% 1.3%;}
+  #cmdwin{position:absolute;left:2.2%;bottom:2.6%;width:24%;min-height:19%;max-height:40%;overflow:hidden;padding:1.1% 1.3%;}
   #statwin{position:absolute;right:2.2%;bottom:2.6%;width:27.5%;padding:1% 1.5%;}
   #msg{position:absolute;top:3.5%;left:50%;transform:translateX(-50%);max-width:70%;
        padding:.7% 2.4%;text-align:center;font-size:clamp(13px,2.5vmin,22px);
@@ -82,7 +89,8 @@
   #overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;
            background:radial-gradient(ellipse at 50% 45%,rgba(8,10,18,.35),rgba(3,4,8,.88) 85%);}
   #overlay.hidden{display:none;}
-  .sheet{width:78%;max-height:92%;padding:2.5% 3%;text-align:center;overflow-y:auto;}
+  .sheet{width:78%;padding:2.5% 3%;text-align:center;overflow:hidden;
+       transform-origin:center center;will-change:transform;}
   .title-big{font-family:'Marcellus',serif;font-size:clamp(26px,7.5vmin,64px);letter-spacing:.3em;
        background:linear-gradient(180deg,#f6e6bc,#d8b878 55%,#8a6a34);
        -webkit-background-clip:text;background-clip:text;color:transparent;
@@ -125,7 +133,7 @@
         background:radial-gradient(ellipse at 50% 45%,rgba(8,10,18,.5),rgba(3,4,8,.9) 85%);}
   #modal.hidden{display:none;}
   .setrow{display:flex;align-items:center;justify-content:space-between;gap:6%;
-        margin:2.4% 8%;font-size:clamp(12px,2.1vmin,17px);letter-spacing:.06em;color:#cfc8b8;}
+        margin:1.9% 8%;font-size:clamp(12px,2.1vmin,17px);letter-spacing:.06em;color:#cfc8b8;}
   .setrow input[type=range]{flex:1;accent-color:#ff46c8;height:4px;}
   .setrow .tog{min-width:64px;padding:.4% 3%;border:1px solid rgba(216,184,120,.5);border-radius:5px;
         background:rgba(14,16,26,.7);color:#cfc8b8;font-family:'Marcellus',serif;font-size:.9em;
@@ -152,8 +160,23 @@
   .bc-txt .bc-flair{color:#b8b0a0;font-size:clamp(11px,2vmin,16px);letter-spacing:.05em;}
   #rotate{position:fixed;inset:0;z-index:99;display:none;align-items:center;justify-content:center;
         background:#05060a;text-align:center;font-family:'Marcellus',serif;color:var(--gold);
-        font-size:20px;letter-spacing:.15em;line-height:2;padding:8%;}
+        padding:8%;}
   @media (orientation:portrait){ #rotate{display:flex;} }
+  .rot-inner{display:flex;flex-direction:column;align-items:center;gap:22px;}
+  .rot-phone{width:clamp(96px,34vw,150px);height:auto;color:var(--gold);
+        filter:drop-shadow(0 0 16px rgba(216,184,120,.35));}
+  .rot-body{transform-origin:60px 62px;animation:rotPhone 2.6s ease-in-out infinite;}
+  @keyframes rotPhone{
+    0%,18%   {transform:rotate(0deg);}
+    45%,72%  {transform:rotate(-90deg);}
+    92%,100% {transform:rotate(0deg);}
+  }
+  .rot-arc{animation:rotArc 2.6s ease-in-out infinite;}
+  @keyframes rotArc{0%,18%{opacity:.25;} 34%{opacity:1;} 60%,100%{opacity:.25;}}
+  .rot-txt{font-size:clamp(14px,4.4vw,20px);letter-spacing:.22em;}
+  @media (prefers-reduced-motion:reduce){
+    .rot-body{animation:none;transform:rotate(-90deg);} .rot-arc{animation:none;opacity:.6;}
+  }
 
   /* ---------- Battle Square casino ---------- */
   #ribbon{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:8;
@@ -287,7 +310,26 @@
     <div class="bc-role">CHALLENGER APPROACHES</div><div class="bc-name" id="bcname"></div>
     <div class="bc-flair" id="bcflair"></div></div></div></div>
 </div>
-<div id="rotate">⟳<br>ROTATE YOUR DEVICE<br><span style="font-size:.65em;color:#b8b0a0">this saga is told in landscape</span></div>
+<div id="rotate">
+  <div class="rot-inner">
+    <svg class="rot-phone" viewBox="0 0 120 120" width="120" height="120" aria-hidden="true">
+      <!-- sweep arc showing the direction of rotation -->
+      <path class="rot-arc" d="M22 30 A 42 42 0 0 1 98 30" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4 6" opacity=".55"/>
+      <path class="rot-arc" d="M98 30 l-9 -3 M98 30 l1 -9" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+      <!-- the phone: rotates from portrait to landscape and back -->
+      <g class="rot-body">
+        <rect x="44" y="34" width="32" height="56" rx="5" ry="5"
+              fill="none" stroke="currentColor" stroke-width="3"/>
+        <rect x="47.5" y="40" width="25" height="42" rx="1.5" fill="currentColor" opacity=".22"/>
+        <rect x="54" y="36.4" width="12" height="2" rx="1" fill="currentColor" opacity=".8"/>
+        <circle cx="60" cy="86" r="2" fill="currentColor" opacity=".8"/>
+      </g>
+    </svg>
+    <div class="rot-txt">ROTATE YOUR DEVICE</div>
+  </div>
+</div>
 <script>
 "use strict";
 /* ============================ UTILS ============================ */
@@ -522,6 +564,43 @@ function showTutorial(){
   });
 }
 function resumeGame(){paused=false;closeModal();}
+
+/* ---- auto-fit: scale any panel down so it always fits — menus never scroll ---- */
+let _fitting=false;
+function fitSheet(el){
+  if(!el||!el.parentElement)return;
+  el.style.transform='none';
+  const box=el.parentElement.getBoundingClientRect();
+  if(!box.height||!box.width)return;
+  const nh=el.scrollHeight, nw=el.scrollWidth;   // natural, unscaled size
+  if(!nh||!nw)return;
+  const s=Math.min(1,(box.height*0.95)/nh,(box.width*0.97)/nw);
+  el.style.transform=s<0.999?'scale('+s.toFixed(4)+')':'none';
+}
+function fitAllSheets(){
+  if(_fitting)return;
+  _fitting=true;                       // our own style writes must not retrigger the observer
+  fitSheet($('#sheet'));fitSheet($('#modalsheet'));
+  requestAnimationFrame(()=>{_fitting=false;});
+}
+(function(){
+  const mo=new MutationObserver(()=>{if(!_fitting)requestAnimationFrame(fitAllSheets);});
+  const sh=$('#sheet'),ms=$('#modalsheet');
+  // content changes only — NOT attributes, or our own transform would loop
+  const opt={childList:true,subtree:true,characterData:true};
+  if(sh)mo.observe(sh,opt);
+  if(ms)mo.observe(ms,opt);
+  // panel show/hide is signalled by a class flip on the container
+  const ov=$('#overlay'),md=$('#modal');
+  if(ov)mo.observe(ov,{attributes:true,attributeFilter:['class']});
+  if(md)mo.observe(md,{attributes:true,attributeFilter:['class']});
+  addEventListener('resize',fitAllSheets);
+  addEventListener('orientationchange',()=>setTimeout(fitAllSheets,150));
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitAllSheets);
+})();
+// belt and braces: block any stray touch-scroll / pinch-zoom on the page itself
+document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault());
 $('#pausebtn').innerHTML=ic('menu',16);
 $('#pausebtn').addEventListener('click',openPause);
 document.addEventListener('keydown',e=>{
@@ -603,65 +682,185 @@ function _shade(hex,f){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>
 
 /* ---- individual creature painters (native coords, feet at h, centre at w/2) ---- */
 function paintHero(g,w,h,C){
-  const cx=w*.52, gy=h-4;
-  // cape behind
-  g.fillStyle=_lg(g,cx,h*.35,cx,gy,[[0,C.cape],[1,_shade(C.cape,-.45)]]);
-  _poly(g,[[cx+18,h*.34],[cx+40,h*.5],[cx+30,gy-6],[cx-4,gy-2],[cx-16,h*.55]]);
-  // legs
-  g.fillStyle=_lg(g,cx,h*.66,cx,gy,[[0,C.clothHi],[1,_shade(C.cloth,-.4)]]);
-  _poly(g,[[cx-18,h*.66],[cx-2,h*.66],[cx-4,gy],[cx-20,gy]]);
-  _poly(g,[[cx+2,h*.66],[cx+18,h*.66],[cx+18,gy],[cx+3,gy]]);
-  // boots
-  g.fillStyle=_shade(C.trim,-.2);_ell(g,cx-12,gy-3,10,6);_ell(g,cx+11,gy-3,10,6);
-  // torso plate
-  g.fillStyle=_lg(g,cx-24,h*.4,cx+26,h*.7,[[0,C.plateHi],[.5,C.plate],[1,_shade(C.plate,-.4)]]);
-  _poly(g,[[cx-24,h*.44],[cx+24,h*.44],[cx+20,h*.7],[cx-20,h*.7]]);
-  // ab lines + centre ridge
-  g.strokeStyle=_shade(C.plate,-.45);g.lineWidth=2;
-  g.beginPath();g.moveTo(cx,h*.45);g.lineTo(cx,h*.69);
-  g.moveTo(cx-16,h*.58);g.lineTo(cx+15,h*.58);g.stroke();
-  g.fillStyle='rgba(255,255,255,.16)';_poly(g,[[cx-24,h*.44],[cx-8,h*.44],[cx-14,h*.7],[cx-20,h*.7]]);
-  // belt
-  g.fillStyle=C.trim;g.fillRect(cx-21,h*.68,42,7);
-  g.fillStyle=_shade(C.trim,.35);g.fillRect(cx-4,h*.68,8,7);
-  // far arm
-  g.fillStyle=_lg(g,cx+18,h*.46,cx+30,h*.66,[[0,C.plate],[1,_shade(C.plate,-.4)]]);
-  _poly(g,[[cx+20,h*.46],[cx+34,h*.5],[cx+30,h*.68],[cx+18,h*.66]]);
-  // pauldrons
-  g.fillStyle=_rg(g,cx-24,h*.44,0,20,[[0,C.plateHi],[1,_shade(C.plate,-.3)]]);_ell(g,cx-22,h*.46,15,12);
-  g.fillStyle=_rg(g,cx+24,h*.44,0,20,[[0,C.plateHi],[1,_shade(C.plate,-.3)]]);_ell(g,cx+22,h*.46,15,12);
-  // head + helm
-  const hy=h*.3;
-  g.fillStyle=C.skin;_ell(g,cx,hy+6,12,13);           // face
-  g.fillStyle=_shade(C.skin,-.28);_ell(g,cx-9,hy+8,4,6); // cheek shadow
-  g.fillStyle=_lg(g,cx,hy-10,cx,hy+8,[[0,C.plateHi],[1,_shade(C.plate,-.2)]]);
-  _poly(g,[[cx-13,hy+4],[cx-13,hy-6],[cx-7,hy-14],[cx+7,hy-14],[cx+13,hy-6],[cx+13,hy+4],[cx+7,hy+2],[cx-7,hy+2]]); // helm
-  g.fillStyle=_shade(C.plate,-.5);g.fillRect(cx-9,hy+2,18,4); // visor slit shadow
-  g.fillStyle=C.eye;g.fillRect(cx-6,hy+3,3,2);g.fillRect(cx+3,hy+3,3,2); // eyes glow
-  // plume
-  g.fillStyle=_lg(g,cx,hy-16,cx-30,hy+2,[[0,C.plumeHi],[1,C.plume]]);
-  _poly(g,[[cx-2,hy-14],[cx+4,hy-14],[cx-14,hy-2],[cx-30,hy+8],[cx-22,hy-4],[cx-10,hy-12]]);
-  // near sword arm (in front)
-  g.fillStyle=_lg(g,cx-26,h*.48,cx-14,h*.66,[[0,C.plateHi],[1,_shade(C.plate,-.35)]]);
-  _poly(g,[[cx-24,h*.48],[cx-10,h*.5],[cx-14,h*.66],[cx-26,h*.62]]);
-  g.fillStyle=C.skin;_ell(g,cx-22,h*.63,6,5); // gauntlet hand
-  // SWORD (tier)
-  paintSword(g,cx-22,h*.63,C);
+  /* Side-on classic JRPG hero — facing LEFT toward the arena (enemies).
+     Built in profile: back leg braced behind, front leg forward, torso
+     angled, head in true profile with spiked hair, blade held ready. */
+  const cx=w*.60, gy=h-4;
+  const F=-1;                       // forward direction (left)
+  const X=d=>cx+d*F;                // helper: +d = forward/toward foe
+  const hairLo=C.plume, hairHi=C.plumeHi;
+
+  /* ---------- cape, streaming BACK (away from the foe) ---------- */
+  g.fillStyle=_lg(g,X(-6),h*.34,X(-34),gy,[[0,_shade(C.cape,.15)],[1,_shade(C.cape,-.5)]]);
+  _poly(g,[[X(-2),h*.36],[X(-14),h*.38],[X(-30),h*.58],[X(-26),h*.8],[X(-34),gy-6],
+           [X(-16),gy-10],[X(-8),h*.72],[X(-4),h*.5]]);
+  g.fillStyle='rgba(0,0,0,.22)';   // inner fold
+  _poly(g,[[X(-4),h*.4],[X(-12),h*.44],[X(-18),h*.7],[X(-10),h*.72]]);
+
+  /* ---------- BACK leg (braced behind, further from viewer) ---------- */
+  g.fillStyle=_lg(g,X(-14),h*.66,X(-14),gy,[[0,_shade(C.cloth,-.15)],[1,_shade(C.cloth,-.55)]]);
+  _poly(g,[[X(-4),h*.66],[X(-14),h*.67],[X(-21),h*.86],[X(-17),gy-3],[X(-8),gy-3],[X(-6),h*.84]]);
+  g.fillStyle=_shade(C.trim,-.35);  // back boot
+  _poly(g,[[X(-19),gy-9],[X(-6),gy-9],[X(-3),gy],[X(-23),gy]]);
+
+  /* ---------- FRONT leg (striding toward the foe) ---------- */
+  g.fillStyle=_lg(g,X(10),h*.66,X(10),gy,[[0,C.clothHi],[1,_shade(C.cloth,-.35)]]);
+  _poly(g,[[X(-2),h*.66],[X(9),h*.66],[X(14),h*.85],[X(12),gy-3],[X(2),gy-3],[X(0),h*.84]]);
+  g.fillStyle=C.trim;               // front boot
+  _poly(g,[[X(0),gy-10],[X(13),gy-10],[X(18),gy],[X(-3),gy]]);
+  g.fillStyle=_shade(C.trim,.3);g.fillRect(X(13)-(F<0?5:0),gy-10,5,3); // toe cap glint
+
+  /* ---------- FAR arm (behind the torso, trailing back) ---------- */
+  g.fillStyle=_lg(g,X(-8),h*.46,X(-16),h*.64,[[0,_shade(C.plate,-.2)],[1,_shade(C.plate,-.55)]]);
+  _poly(g,[[X(-4),h*.46],[X(-13),h*.5],[X(-17),h*.64],[X(-9),h*.66],[X(-4),h*.56]]);
+
+  /* ---------- TORSO in profile (chest forward, back arched) ---------- */
+  g.fillStyle=_lg(g,X(12),h*.42,X(-10),h*.7,[[0,C.plateHi],[.45,C.plate],[1,_shade(C.plate,-.45)]]);
+  _poly(g,[[X(10),h*.44],[X(13),h*.54],[X(11),h*.66],[X(2),h*.7],[X(-10),h*.69],
+           [X(-13),h*.56],[X(-9),h*.44],[X(0),h*.41]]);
+  // chest highlight running down the leading edge
+  g.fillStyle='rgba(255,255,255,.20)';
+  _poly(g,[[X(9),h*.45],[X(13),h*.55],[X(10),h*.65],[X(5),h*.63],[X(6),h*.5]]);
+  // back shadow
+  g.fillStyle='rgba(0,0,0,.25)';
+  _poly(g,[[X(-9),h*.45],[X(-13),h*.57],[X(-10),h*.68],[X(-5),h*.66],[X(-6),h*.5]]);
+  // segmented plate lines
+  g.strokeStyle=_shade(C.plate,-.5);g.lineWidth=1.6;
+  g.beginPath();
+  g.moveTo(X(-10),h*.55);g.lineTo(X(11),h*.545);
+  g.moveTo(X(-9),h*.62);g.lineTo(X(11),h*.615);
+  g.stroke();
+
+  /* ---------- belt + tasset ---------- */
+  g.fillStyle=C.trim;
+  _poly(g,[[X(-12),h*.675],[X(12),h*.665],[X(12),h*.705],[X(-12),h*.715]]);
+  g.fillStyle=_shade(C.trim,.4);_ell(g,X(1),h*.69,4.5,4);   // buckle
+  g.fillStyle=_shade(C.trim,-.4);_ell(g,X(1),h*.69,2,1.8);
+
+  /* ---------- scabbard on the far hip ---------- */
+  g.fillStyle=_shade(C.guard,-.35);
+  g.save();g.translate(X(-10),h*.72);g.rotate(F*0.42);
+  g.fillRect(-3,0,6,30);
+  g.fillStyle=_shade(C.trim,-.1);g.fillRect(-3.5,0,7,4);g.fillRect(-3.5,26,7,4);
+  g.restore();
+
+  /* ---------- near pauldron (big, over the leading shoulder) ---------- */
+  g.fillStyle=_rg(g,X(2),h*.42,1,20,[[0,_shade(C.plateHi,.25)],[.6,C.plate],[1,_shade(C.plate,-.45)]]);
+  _poly(g,[[X(-11),h*.44],[X(-4),h*.375],[X(8),h*.375],[X(15),h*.44],[X(13),h*.52],
+           [X(0),h*.5],[X(-10),h*.5]]);
+  g.fillStyle='rgba(255,255,255,.28)';   // top rim light
+  _poly(g,[[X(-3),h*.385],[X(7),h*.385],[X(11),h*.42],[X(-6),h*.42]]);
+  g.fillStyle=C.trim;                    // gold rim on the leading edge
+  _poly(g,[[X(15),h*.44],[X(13),h*.52],[X(9),h*.51],[X(11),h*.435]]);
+
+  /* ---------- HEAD in profile, facing left ---------- */
+  const hy=h*.29;
+  // neck
+  g.fillStyle=_shade(C.skin,-.3);_poly(g,[[X(-5),h*.36],[X(4),h*.36],[X(3),h*.41],[X(-5),h*.41]]);
+  // skull + jaw (profile silhouette: brow, nose, lips, chin)
+  g.fillStyle=C.skin;
+  g.beginPath();
+  g.moveTo(X(-9),hy-9);                              // back of skull
+  g.quadraticCurveTo(X(2),hy-14, X(9),hy-5);         // crown to brow
+  g.lineTo(X(11),hy-1);                              // brow ridge
+  g.lineTo(X(14),hy+2);                              // NOSE tip
+  g.lineTo(X(10),hy+4);                              // under nose
+  g.lineTo(X(11),hy+6);                              // upper lip
+  g.lineTo(X(9),hy+8);                               // mouth
+  g.lineTo(X(10),hy+11);                             // chin
+  g.quadraticCurveTo(X(4),hy+15, X(-4),hy+12);       // jawline back
+  g.quadraticCurveTo(X(-10),hy+6, X(-9),hy-9);
+  g.closePath();g.fill();
+  // cheek / jaw shading
+  g.fillStyle=_shade(C.skin,-.22);
+  _poly(g,[[X(-8),hy+1],[X(0),hy+3],[X(2),hy+11],[X(-4),hy+12]]);
+  // ear
+  g.fillStyle=_shade(C.skin,-.15);_ell(g,X(-4),hy+3,2.4,3.2);
+  g.fillStyle=_shade(C.skin,-.4);_ell(g,X(-4),hy+3,1.1,1.6);
+  // brow
+  g.fillStyle=_shade(C.skin,-.5);
+  _poly(g,[[X(5),hy-2],[X(11),hy-1],[X(11),hy+.6],[X(5),hy-.4]]);
+  // EYE (single, in profile — determined, glowing iris)
+  g.fillStyle='#fdfbf4';_poly(g,[[X(6),hy+1],[X(10.5),hy+1.6],[X(9),hy+4],[X(5.5),hy+3.2]]);
+  g.fillStyle=C.eye;_ell(g,X(8.4),hy+2.4,1.9,1.9);
+  g.fillStyle='#0d0a14';_ell(g,X(8.7),hy+2.4,.9,1.2);
+  g.fillStyle='rgba(255,255,255,.9)';_ell(g,X(9.3),hy+1.7,.5,.5);
+  // mouth line
+  g.strokeStyle=_shade(C.skin,-.55);g.lineWidth=1;
+  g.beginPath();g.moveTo(X(10.5),hy+6.6);g.lineTo(X(8.5),hy+7.4);g.stroke();
+
+  /* ---------- HAIR: swept-back spikes, classic JRPG ---------- */
+  g.fillStyle=_lg(g,X(0),hy-16,X(-16),hy+6,[[0,hairHi],[1,hairLo]]);
+  // main mass over the crown
+  g.beginPath();
+  g.moveTo(X(10),hy-4);
+  g.quadraticCurveTo(X(4),hy-16, X(-8),hy-12);
+  g.quadraticCurveTo(X(-14),hy-8, X(-12),hy+4);
+  g.lineTo(X(-8),hy-2);
+  g.lineTo(X(-9),hy+4);
+  g.lineTo(X(-4),hy-4);
+  g.closePath();g.fill();
+  // spikes trailing back
+  _poly(g,[[X(-2),hy-12],[X(-16),hy-16],[X(-8),hy-7]]);
+  _poly(g,[[X(-6),hy-10],[X(-22),hy-8],[X(-9),hy-3]]);
+  _poly(g,[[X(-7),hy-5],[X(-21),hy+2],[X(-8),hy+2]]);
+  _poly(g,[[X(-6),hy+1],[X(-17),hy+11],[X(-7),hy+7]]);
+  // forelock falling over the brow
+  g.fillStyle=hairHi;
+  _poly(g,[[X(2),hy-11],[X(12),hy-6],[X(9),hy-1],[X(4),hy-5]]);
+  _poly(g,[[X(6),hy-9],[X(14),hy-3],[X(10),hy-1.5]]);
+  // headband (trim colour) across the brow, tails flying back
+  g.fillStyle=C.trim;
+  _poly(g,[[X(-9),hy-6],[X(11),hy-4],[X(11),hy-1.4],[X(-9),hy-3.4]]);
+  g.fillStyle=_shade(C.trim,.35);
+  _poly(g,[[X(-9),hy-6],[X(11),hy-4],[X(11),hy-3],[X(-9),hy-5]]);
+  g.fillStyle=C.trim;   // trailing ribbons
+  _poly(g,[[X(-8),hy-5],[X(-20),hy-1],[X(-17),hy+2],[X(-8),hy-2]]);
+  _poly(g,[[X(-8),hy-2],[X(-18),hy+6],[X(-14),hy+8],[X(-8),hy+1]]);
+
+  /* ---------- NEAR arm reaching forward, gripping the sword ---------- */
+  // upper arm
+  g.fillStyle=_lg(g,X(4),h*.46,X(14),h*.6,[[0,C.plateHi],[1,_shade(C.plate,-.35)]]);
+  _poly(g,[[X(-2),h*.47],[X(9),h*.46],[X(15),h*.57],[X(9),h*.61],[X(1),h*.56]]);
+  // vambrace / forearm angled forward-down
+  g.fillStyle=_lg(g,X(10),h*.56,X(22),h*.68,[[0,C.plateHi],[1,_shade(C.plate,-.4)]]);
+  _poly(g,[[X(9),h*.55],[X(16),h*.56],[X(23),h*.66],[X(18),h*.7],[X(9),h*.62]]);
+  g.fillStyle=C.trim;   // vambrace band
+  _poly(g,[[X(16),h*.585],[X(21),h*.635],[X(19),h*.66],[X(14),h*.61]]);
+  // gauntlet fist
+  g.fillStyle=_rg(g,X(21),h*.68,1,9,[[0,_shade(C.plateHi,.2)],[1,_shade(C.plate,-.35)]]);
+  _ell(g,X(21),h*.685,6,5.5);
+  g.fillStyle=_shade(C.plate,-.55);   // knuckle line
+  g.beginPath();g.moveTo(X(17),h*.665);g.lineTo(X(25),h*.675);g.stroke();
+
+  /* ---------- SWORD held ready, angled up and forward ---------- */
+  paintSword(g,X(21),h*.685,C,F);
 }
-function paintSword(g,hx,hy,C){
-  g.save();g.translate(hx,hy);g.rotate(-Math.PI/2.7);
+function paintSword(g,hx,hy,C,F){
+  F=F||-1;
+  g.save();g.translate(hx,hy);
+  // blade sweeps up and FORWARD (toward the foe) in a ready guard
+  g.rotate(F*0.62);
+  g.scale(F<0?-1:1,1);   // keep bevel lighting consistent when mirrored
   const L=C.bladeLen;
-  // glow
   if(C.bladeGlow){g.fillStyle=C.bladeGlow;_ell(g,0,-L*.5,10,L*.55);}
-  // blade
-  g.fillStyle=_lg(g,-5,0,7,0,[[0,_shade(C.blade,-.3)],[.45,C.blade],[.5,'#ffffff'],[.55,C.blade],[1,_shade(C.blade,-.4)]]);
-  _poly(g,[[-4,2],[4,2],[3,-L],[0,-L-7],[-3,-L]]);
-  // guard
-  g.fillStyle=C.guard;g.fillRect(-9,2,18,5);
-  g.fillStyle=_shade(C.guard,.3);g.fillRect(-9,2,18,2);
-  // grip + pommel
-  g.fillStyle='#3a2a18';g.fillRect(-2.5,7,5,12);
-  g.fillStyle=C.guard;_ell(g,0,20,4,4);
+  // blade with a bright central bevel
+  g.fillStyle=_lg(g,-5,0,7,0,[[0,_shade(C.blade,-.35)],[.42,C.blade],[.5,'#ffffff'],[.58,C.blade],[1,_shade(C.blade,-.45)]]);
+  _poly(g,[[-4.5,0],[4.5,0],[3.4,-L],[0,-L-8],[-3.4,-L]]);
+  // fuller (blood groove)
+  g.fillStyle='rgba(255,255,255,.35)';
+  _poly(g,[[-1,-4],[1,-4],[.8,-L+6],[-.8,-L+6]]);
+  // crossguard
+  g.fillStyle=_lg(g,-11,0,11,0,[[0,_shade(C.guard,-.3)],[.5,_shade(C.guard,.3)],[1,_shade(C.guard,-.3)]]);
+  _poly(g,[[-11,1],[11,1],[9,6],[-9,6]]);
+  g.fillStyle=_shade(C.guard,.45);g.fillRect(-9,1,18,1.8);
+  // grip
+  g.fillStyle='#33241a';g.fillRect(-2.6,6,5.2,13);
+  g.strokeStyle='rgba(0,0,0,.5)';g.lineWidth=.8;
+  for(let i=8;i<19;i+=3){g.beginPath();g.moveTo(-2.6,i);g.lineTo(2.6,i);g.stroke();}
+  // pommel
+  g.fillStyle=_rg(g,0,20,0,5,[[0,_shade(C.guard,.4)],[1,_shade(C.guard,-.25)]]);
+  _ell(g,0,20,4.2,4.2);
   g.restore();
 }
 function paintSlime(g,w,h,C){
