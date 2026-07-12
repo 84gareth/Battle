@@ -61,38 +61,6 @@
 
   /* ---- (20) phones: the commands become a wide, chunky thumb bar across the
        bottom, with targets big enough to hit without looking ---- */
-  @media (max-width:820px), (pointer:coarse){
-    #cmdwin{left:2%;right:2%;width:auto;bottom:2%;
-            min-height:0;max-height:none;padding:1.4% 1.6%;}
-    #cmdwin.grid{display:grid;grid-template-columns:1fr 1fr;gap:2%;}
-    /* the status strip goes ABOVE the thumb bar. Its exact offset is measured in
-       JS (--cmdh) because the command bar's height changes with the menu. */
-    #statwin{right:2%;left:2%;width:auto;top:auto;
-            bottom:calc(2.5% + var(--cmdh,16vmin));padding:.5% 2% .7%;
-            border-width:3px;border-radius:12px;
-            transition:bottom .12s;}
-    /* on a phone this is a slim strip, not a panel */
-    #statwin .srow{margin:.35% 0;gap:2%;}
-    #statwin .bar{height:7px;border-width:2px;border-radius:5px;margin:0 2%;}
-    #statwin .bar i::after{inset:0 0 50% 0;}
-    #pname{font-size:clamp(11px,2.9vw,15px);}
-    #statwin .lbl{font-size:clamp(8px,2.2vw,11px);width:8%;}
-    #statwin .val{font-size:clamp(8px,2.2vw,11px);}
-    #statwin .tiny{font-size:clamp(8px,2.1vw,11px);}
-    .cmd{margin:0;padding:3.2% 3% 3.2% 11%;
-         font-size:clamp(14px,4vw,20px);border-radius:12px;
-         min-height:9.5vmin;display:flex;align-items:center;
-         background:linear-gradient(180deg,#6a4a96,#472f6e);
-         border:3px solid var(--stroke);
-         box-shadow:0 4px 0 var(--stroke),inset 0 2px 0 rgba(255,255,255,.18);}
-    .cmd.sel{box-shadow:0 4px 0 var(--stroke),0 0 14px rgba(255,210,60,.6),
-             inset 0 2px 0 rgba(255,255,255,.35);}
-    .cmd.sel::before{left:4%;border-left-width:10px;
-             border-top-width:7px;border-bottom-width:7px;}
-    .cmd .cost,.cmd .cnt{font-size:.75em;}
-    .reels{width:88%;}
-    .wagers{gap:1.6%;}
-  }
   .cmd{display:block;width:100%;text-align:left;background:rgba(0,0,0,.18);
        border:0;border-radius:9px;color:#fff2dc;
        font-family:'Baloo 2',cursive;font-weight:700;font-size:clamp(13px,2.4vmin,21px);letter-spacing:.03em;
@@ -132,7 +100,7 @@
   .val{font-size:clamp(11px,1.9vmin,16px);color:#d8d2c2;min-width:20%;text-align:right;font-variant-numeric:tabular-nums;}
 
   /* ---------- overlays ---------- */
-  #overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;
+  #overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:24;
            background:radial-gradient(ellipse at 50% 45%,rgba(8,10,18,.35),rgba(3,4,8,.88) 85%);}
   #overlay.hidden{display:none;}
   .sheet{width:78%;padding:2.5% 3%;text-align:center;overflow:hidden;
@@ -234,9 +202,9 @@
   /* inset on the left so the portraits clear the pause button; the right is free
      now that the sound toggle has moved into the pause menu */
   #hud{position:absolute;top:1.6%;left:0;right:0;z-index:9;display:flex;
-       justify-content:space-between;padding:0 2% 0 9%;pointer-events:none;gap:3%;}
+       justify-content:space-between;padding:0 2% 0 9%;pointer-events:none;gap:10%;}
   #hud.hidden{display:none;}
-  .hudside{display:flex;align-items:center;gap:8px;width:44%;min-width:0;}
+  .hudside{display:flex;align-items:center;gap:6px;width:37%;min-width:0;}
   .hudside.right{justify-content:flex-end;}
   .hudpic{width:clamp(34px,6.4vmin,58px);height:clamp(34px,6.4vmin,58px);flex:none;
        border:4px solid var(--stroke);border-radius:12px;overflow:hidden;
@@ -471,10 +439,179 @@
         font-size:clamp(14px,2.4vmin,20px);color:#8cf0a0;
         background:rgba(0,0,0,.3);border-radius:7px;padding:0 .7em;}
   .statrow .se{grid-area:e;font-size:clamp(9px,1.6vmin,13px);color:#b8aecc;line-height:1.3;}
+  /* ---- (16) level-up rows: a bar that fills and a number that ticks ---- */
+  .statrow{grid-template-columns:auto 1fr auto auto;
+        grid-template-areas:"i n v p" "i b b b" "i e e e";}
+  .statrow .sbar{grid-area:b;height:5px;background:#150d20;border-radius:3px;
+        overflow:hidden;margin:3px 0 2px;}
+  .statrow .sbar i{display:block;height:100%;border-radius:3px;
+        background:linear-gradient(90deg,var(--cyan),var(--gold));
+        transition:width .35s cubic-bezier(.2,1.4,.4,1);}
+  .statrow.gained{animation:statGain .45s ease-out;}
+  @keyframes statGain{
+    0%{box-shadow:0 4px 0 var(--stroke),0 0 0 rgba(255,210,60,0);}
+    35%{box-shadow:0 4px 0 var(--stroke),0 0 22px rgba(255,210,60,.9);filter:brightness(1.25);}
+    100%{box-shadow:0 4px 0 var(--stroke);}
+  }
+  .statrow.gained .sv{color:#8cf0a0;}
+  /* ---- (6) the forge ---- */
+  .forge{margin:2% 8%;text-align:left;}
+  .forge .fname{font-family:'Baloo 2',cursive;font-weight:800;color:var(--gold);
+        font-size:clamp(16px,3.2vmin,26px);text-align:center;
+        text-shadow:0 2px 0 var(--stroke);margin-bottom:1%;}
+  .forge .fpips{display:flex;justify-content:center;gap:6px;margin-bottom:2.5%;}
+  .forge .pip{width:14px;height:14px;border-radius:4px;background:#150d20;
+        border:2px solid var(--stroke);}
+  .forge .pip.lit{background:linear-gradient(180deg,#ffe6a0,var(--gold));
+        box-shadow:0 0 10px rgba(255,210,60,.8);}
+  .forge .frow{display:flex;justify-content:space-between;align-items:center;
+        padding:1.2% 0;border-bottom:2px solid rgba(0,0,0,.25);
+        font-size:clamp(11px,2vmin,16px);color:#d8cbe8;font-weight:700;}
+  .forge .frow b{font-family:'Baloo 2',cursive;font-weight:800;color:#fff;}
+  /* ---- FIVE PRIZE WHEELS ---- */
+  .reels.w5{width:94%;gap:1.2%;}
+  .reels.w5 .reel{height:clamp(56px,12vmin,96px);}
+  .reels.w5 .reel .cell svg{width:clamp(24px,5vmin,42px);height:clamp(24px,5vmin,42px);}
+  .prizes{display:grid;grid-template-columns:repeat(5,1fr);gap:1.2%;margin:2% 3% 1%;}
+  .prize{background:linear-gradient(180deg,#5a4180,#3a2757);
+        border:3px solid var(--rc,#b8c0d0);border-radius:11px;
+        padding:2% 1.2% 2.4%;cursor:pointer;color:#e6dcf4;
+        font-family:inherit;font-weight:700;text-align:center;
+        box-shadow:0 4px 0 var(--stroke);position:relative;overflow:hidden;
+        animation:dealIn .4s cubic-bezier(.2,1.5,.4,1) backwards;
+        transition:transform .12s,filter .12s;}
+  .prize:hover,.prize:focus-visible{transform:translateY(-4px);filter:brightness(1.15);outline:none;}
+  .prize.rar-rare     {box-shadow:0 4px 0 var(--stroke),0 0 14px var(--rg);}
+  .prize.rar-epic     {box-shadow:0 4px 0 var(--stroke),0 0 20px var(--rg);}
+  .prize.rar-legendary{box-shadow:0 4px 0 var(--stroke),0 0 28px var(--rg);
+        animation:dealIn .4s cubic-bezier(.2,1.5,.4,1) backwards, legend 1.6s ease-in-out infinite .4s;}
+  .prize.rar-epic::after,.prize.rar-legendary::after{
+        content:"";position:absolute;inset:0;pointer-events:none;
+        background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.28) 50%,transparent 65%);
+        background-size:280% 100%;animation:sheen 2.6s linear infinite;}
+  .prize .prarity{font-family:'Baloo 2',cursive;font-weight:800;letter-spacing:.1em;
+        font-size:clamp(7px,1.3vmin,10px);color:var(--rc);margin-bottom:3%;}
+  .prize .pico{color:var(--rc);margin-bottom:3%;filter:drop-shadow(0 2px 0 var(--stroke));}
+  .prize .pname{font-family:'Baloo 2',cursive;font-weight:800;color:#fff;
+        font-size:clamp(10px,1.9vmin,15px);line-height:1.15;margin-bottom:3%;}
+  .prize .pdesc{font-size:clamp(8px,1.4vmin,11px);color:#c8bcdc;line-height:1.3;}
+  .prize .pdesc b{color:var(--gold);}
+
+  /* ---- THE SHOP ---- */
+  .shopgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:1.4%;margin:2% 3%;}
+  .shopit{background:linear-gradient(180deg,#5a4180,#3a2757);
+        border:3px solid var(--stroke);border-radius:11px;padding:2.2% 1.2%;
+        cursor:pointer;color:#e6dcf4;font-family:inherit;font-weight:700;text-align:center;
+        box-shadow:0 4px 0 var(--stroke);transition:transform .12s,filter .12s;
+        display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .shopit:hover{transform:translateY(-3px);filter:brightness(1.15);}
+  .shopit.poor{opacity:.42;cursor:not-allowed;}
+  .shopit .sico{color:var(--gold);filter:drop-shadow(0 2px 0 var(--stroke));}
+  .shopit .sname{font-family:'Baloo 2',cursive;font-weight:800;color:#fff;
+        font-size:clamp(10px,1.9vmin,15px);line-height:1.1;}
+  .shopit .sdesc{font-size:clamp(8px,1.4vmin,11px);color:#c0b4d4;line-height:1.25;flex:1;}
+  .shopit .scost{font-family:'Baloo 2',cursive;font-weight:800;color:var(--gold);
+        font-size:clamp(10px,1.9vmin,15px);text-shadow:0 2px 0 var(--stroke);}
+
+  /* ---- (13) bestiary ---- */
+  .bstgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.4%;margin:2% 3%;}
+  .bst{background:linear-gradient(180deg,#5a4180,#3a2757);
+        border:3px solid var(--stroke);border-radius:11px;padding:2% 1.5%;
+        text-align:center;box-shadow:0 4px 0 var(--stroke);}
+  .bst.locked{opacity:.4;background:rgba(0,0,0,.3);}
+  .bstpic{width:clamp(32px,7vmin,56px);height:clamp(32px,7vmin,56px);margin:0 auto 4%;
+        border:2px solid var(--stroke);border-radius:9px;overflow:hidden;
+        display:flex;align-items:center;justify-content:center;color:#8d84a0;
+        background:rgba(0,0,0,.3);}
+  .bstpic img{width:100%;height:100%;object-fit:cover;display:block;}
+  .bstname{font-family:'Baloo 2',cursive;font-weight:800;color:var(--gold);
+        font-size:clamp(10px,1.8vmin,14px);line-height:1.1;}
+  .bstmeta{font-size:clamp(8px,1.4vmin,11px);color:#b8aecc;margin-bottom:3%;}
+  .bstrow{display:flex;justify-content:space-between;font-size:clamp(8px,1.4vmin,11px);
+        color:#cfc4e0;padding:1px 2px;}
+  .bstrow b{font-weight:800;}
+  .bstatk{font-size:clamp(7px,1.3vmin,10px);color:#9a90b0;margin-top:4%;line-height:1.25;}
   .pname-lbl{font-family:'Baloo 2',cursive;font-weight:800;letter-spacing:.06em;color:var(--gold);
         font-size:clamp(11px,2vmin,16px);margin-bottom:1.5%;}
   @media (prefers-reduced-motion:reduce){ .cmd.sel::before{animation:none} .card:hover{transform:none}
         #callout.pop{animation:none;opacity:1;} .wager{transition:none;} }
+
+  /* ==========================================================================
+     (20) PHONES — placed at the END of the stylesheet on purpose: it has the
+     same specificity as the desktop rules, so it must come last to win.
+     ========================================================================== */
+  @media (max-width:820px), (pointer:coarse){
+    /* --- commands: a grid whose column count matches the number of buttons,
+           so two options give two buttons, not two full-width slabs --- */
+    #cmdwin{left:1.5%;right:1.5%;width:auto;bottom:1.5%;
+            min-height:0;max-height:none;padding:1% 1.2%;
+            border-width:3px;border-radius:12px;
+            display:grid;gap:1.4%;
+            grid-template-columns:repeat(var(--cols,4),1fr);}
+    #cmdwin.dense{gap:1.1%;}
+
+    .cmd{margin:0;padding:1.5% .6%;width:auto;
+         display:flex;flex-direction:column;align-items:center;justify-content:center;
+         text-align:center;line-height:1.15;
+         min-height:7.4vmin;border-radius:9px;
+         font-size:clamp(10px,2.5vw,15px);letter-spacing:0;
+         background:linear-gradient(180deg,#6a4a96,#472f6e);
+         border:2px solid var(--stroke);
+         box-shadow:0 3px 0 var(--stroke),inset 0 2px 0 rgba(255,255,255,.16);}
+    /* the cost/count sits UNDER the label — never jammed against it */
+    .cmd .cost,.cmd .cnt{float:none;display:block;
+         font-size:.72em;opacity:.85;margin-top:2px;line-height:1;}
+    .cmd svg{width:1em;height:1em;}
+    .cmd.sel{background:linear-gradient(180deg,var(--gold),var(--gold-dim));
+             color:#3a2400;text-shadow:0 1px 0 rgba(255,255,255,.4);
+             box-shadow:0 3px 0 var(--stroke),0 0 12px rgba(255,210,60,.55),
+                        inset 0 2px 0 rgba(255,255,255,.35);transform:none;}
+    .cmd.sel .cost,.cmd.sel .cnt{color:#5a3a00;}
+    .cmd.sel::before{display:none;}
+    #cmdwin.dense .cmd{min-height:5.6vmin;padding:1% .3%;font-size:clamp(9px,2.1vw,13px);}
+
+    /* --- status: ONE slim strip, right above the buttons --- */
+    #statwin{left:1.5%;right:1.5%;width:auto;top:auto;
+            bottom:calc(1.5% + var(--cmdh,14vmin) + 1.5%);
+            display:flex;align-items:center;gap:1.6%;
+            padding:.45% 1.6%;border-width:3px;border-radius:11px;
+            transition:bottom .12s;}
+    #statwin .srow{margin:0;flex:1 1 0;min-width:0;gap:1.5%;}
+    #statwin .srow:first-child{flex:0 0 auto;}
+    #statwin .srow:last-child {flex:0 0 auto;}
+    #roundlbl,#gear{display:none;}
+    #pname{font-size:clamp(10px,2.5vw,14px);}
+    #statwin .lbl{width:auto;font-size:clamp(8px,1.9vw,10px);letter-spacing:0;}
+    #statwin .val{font-size:clamp(8px,1.9vw,10px);white-space:nowrap;}
+    #statwin .bar{height:6px;border-width:2px;border-radius:4px;margin:0 1.5%;}
+    #statwin .bar i::after{inset:0 0 45% 0;}
+    #scoretxt{font-size:clamp(9px,2.2vw,13px);}
+
+    /* --- the battle message must not sit on the ribbon / HUD --- */
+    #msg{top:auto;bottom:calc(1.5% + var(--cmdh,14vmin) + 8%);
+         font-size:clamp(10px,2.6vw,15px);padding:.8% 2.4%;max-width:76%;}
+
+    /* --- HUD + ribbon scale down --- */
+    #ribbon{font-size:clamp(9px,2.2vw,13px);padding:.5% 2%;}
+    .hudpic{width:clamp(26px,7vw,40px);height:clamp(26px,7vw,40px);border-width:3px;border-radius:9px;}
+    .hudname{font-size:clamp(9px,2.2vw,13px);}
+    .hudbar{height:clamp(7px,1.8vw,11px);border-width:2px;}
+
+    .reels{width:88%;}
+    .reels.w5{width:96%;gap:1%;}
+    .reels.w5 .reel{height:clamp(44px,11vw,72px);}
+    .prizes{grid-template-columns:repeat(5,1fr);gap:1%;margin:1.5% 1.5%;}
+    .prize{padding:1.6% .6% 2%;border-width:2px;}
+    .prize .pname{font-size:clamp(8px,1.9vw,12px);}
+    .prize .pdesc{font-size:clamp(6px,1.4vw,9px);}
+    .prize .prarity{font-size:clamp(6px,1.2vw,8px);}
+    .shopgrid{grid-template-columns:repeat(5,1fr);gap:1%;margin:1.5%;}
+    .shopit{padding:1.6% .5%;border-width:2px;}
+    .shopit .sname{font-size:clamp(8px,1.9vw,12px);}
+    .shopit .sdesc{font-size:clamp(6px,1.4vw,9px);}
+    .shopit .scost{font-size:clamp(8px,1.8vw,12px);}
+    .bstgrid{grid-template-columns:repeat(5,1fr);}
+  }
 </style>
 </head>
 <body>
@@ -674,6 +811,59 @@ const ACHIEVEMENTS=[
  {id:'sovereign',icon:'crown',name:'Regicide',desc:'Defeat the Arena Sovereign',test:()=>LT.champions>=1},
  {id:'endless20',icon:'infinity',name:'Endless',desc:'Reach Battle 20',test:()=>LT.maxRound>=20},
 ];
+/* ---- (13) BESTIARY: an entry unlocks the first time you kill something ---- */
+function bestiaryRecord(e){
+  LT.bestiary=LT.bestiary||{};
+  const id=e.baseId||e.id;
+  const b=LT.bestiary[id]||(LT.bestiary[id]={kills:0});
+  b.kills++;
+  b.name=e.name;
+  saveLT();
+}
+function allCreatures(){
+  const out=[];
+  for(const t of ENEMY_TYPES) out.push({...t,kind:'Foe'});
+  for(const t of MINIBOSSES)  out.push({...t,kind:'Elite'});
+  for(const t of BOSSES)      out.push({...t,kind:'Boss'});
+  for(const t of CHAMPIONS)   out.push({...t,kind:'Champion'});
+  return out;
+}
+function showBestiary(){
+  gameState='bestiary';
+  const all=allCreatures();
+  const seen=LT.bestiary||{};
+  const known=all.filter(t=>seen[t.id]).length;
+  const cards=all.map(t=>{
+    const rec=seen[t.id];
+    if(!rec){
+      return '<div class="bst locked">'+
+        '<div class="bstpic">'+ic('question',26)+'</div>'+
+        '<div class="bstname">? ? ?</div>'+
+        '<div class="bstmeta">Undiscovered</div></div>';
+    }
+    const weak=t.weak?'<span style="color:#ff8a3a">'+t.weak.toUpperCase()+'</span>':'—';
+    const res =t.res ?'<span style="color:#8cb8ff">'+t.res.toUpperCase()+'</span>':'—';
+    const imm =(t.immune&&t.immune.length)?t.immune.join(' '):'—';
+    let pic='';
+    try{pic='<img src="'+foePortrait(t,110)+'" alt="">';}catch(e){pic=ic('skull',26);}
+    return '<div class="bst">'+
+      '<div class="bstpic">'+pic+'</div>'+
+      '<div class="bstname">'+t.name+'</div>'+
+      '<div class="bstmeta">'+t.kind+' · slain '+rec.kills+'</div>'+
+      '<div class="bstrow">Weak <b>'+weak+'</b></div>'+
+      '<div class="bstrow">Resists <b>'+res+'</b></div>'+
+      '<div class="bstrow">Immune <b>'+imm+'</b></div>'+
+      '<div class="bstatk">'+t.atks.map(a=>a.n).join(' · ')+'</div>'+
+    '</div>';
+  }).join('');
+  sheet.innerHTML='<div class="slot-title" style="font-size:clamp(16px,3.6vmin,28px)">BESTIARY</div>'+
+    '<div class="subtitle" style="font-size:clamp(11px,2vmin,15px)">'+known+' of '+all.length+' discovered</div>'+
+    '<hr class="rule">'+
+    '<div class="bstgrid">'+cards+'</div>'+
+    '<button class="mbtn" id="bstBack">‹ Back</button>';
+  $('#bstBack').addEventListener('click',()=>{SFX.back();showTitle();});
+  showOverlay();
+}
 function checkAchievements(){
   const newly=[];
   for(const a of ACHIEVEMENTS){if(!LT.ach[a.id]&&a.test()){LT.ach[a.id]=Date.now();newly.push(a);}}
@@ -1854,7 +2044,7 @@ const UNIQUES=[
 function makeUnique(u,m,cx,fy){
   const baseType=[...ENEMY_TYPES].find(t=>t.id===u.base);
   const t={...baseType,...u,name:u.name,hp:Math.round(baseType.hp*u.boostHp),atk:Math.round(baseType.atk*u.boostAtk)};
-  const e=makeEnemy(t,m,cx,fy,1);e.dh=u.dh||e.dh;e.bonusBP=u.bonusBP;e.unique=1;return e;
+  const e=makeEnemy(t,m,cx,fy,1);e.dh=u.dh||e.dh;e.bonusBP=u.bonusBP;e.unique=1;e.baseId=u.base;return e;
 }
 // elite affixes rolled onto mini-bosses
 const AFFIXES=[
@@ -2559,6 +2749,47 @@ function drawExpression(g,e,x,y,r){
   }
   g.restore();
 }
+/* ---- (18) IDLE CHATTER: foes quip between turns. Lines are chosen by what is
+   actually happening — winning, hurt, enraged, or watching a friend die. ---- */
+const CHATTER={
+  slime:      {idle:['Blorp?','Squish squish!','Wobble wobble.'],hurt:['Sploosh!','That squished!'],win:['Blorp! Blorp!']},
+  bat:        {idle:['Screeee!','Can\'t catch me!','Up here!'],hurt:['My wing!','Eeek!'],win:['Too slow!']},
+  imp:        {idle:['Burn, burn!','Hee hee hee!','Toasty!'],hurt:['Ouchie!','Not the face!'],win:['Crispy!']},
+  goblin:     {idle:['Shiny loot!','Me smash!','Gimme gimme!'],hurt:['Oi! That hurt!','No fair!'],win:['Goblin wins!']},
+  skel:       {idle:['Rattle rattle...','Join us.','Bone dry.'],hurt:['My femur!','Cracked!'],win:['Another skull.']},
+  ghost:      {idle:['Oooooo...','So cold...','Stay with me...'],hurt:['Whyyyy...'],win:['Come closer...']},
+  mage:       {idle:['Behold my art!','You cannot comprehend.','Foolish.'],hurt:['Impossible!'],win:['As calculated.']},
+  golem:      {idle:['...','CRUSH.','ROCK.'],hurt:['CRACK.'],win:['DUST.']},
+  hornet:     {idle:['Bzzzzt!','Sting sting!'],hurt:['Bzzk!'],win:['Bzz-zz-zz!']},
+  salamander: {idle:['Feel the heat!','Sizzle!'],hurt:['Doused!'],win:['Ashes!']},
+  wraith:     {idle:['Your soul is warm...','Give it to me...'],hurt:['My essence!'],win:['Delicious.']},
+  ogre:       {idle:['OGRE HUNGRY.','SMASH LITTLE ONE.'],hurt:['OGRE ANGRY!'],win:['OGRE FULL.']},
+  dragon:     {idle:['You are an appetiser.','Kneel.'],hurt:['You DARE?'],win:['As expected.']},
+  lich:       {idle:['Death is a door.','I have all the time there is.'],hurt:['Flesh is a formality.'],win:['Rest now.']},
+  titan:      {idle:['IRON DOES NOT TIRE.','SYSTEMS NOMINAL.'],hurt:['ARMOUR BREACHED.'],win:['TARGET NEUTRALISED.']},
+  gigas:      {idle:['GRAAAH!','LITTLE THING.'],hurt:['RRRGH!'],win:['FLAT.']},
+  chimera:    {idle:['Three of us. One of you.','Which head bites first?'],hurt:['Aaargh!'],win:['We feast.']},
+  sovereign:  {idle:['None leave my arena.','The crowd wants blood.'],hurt:['You draw MY blood?'],win:['Predictable.']},
+  colossus:   {idle:['THE VOID HUNGERS.','YOU ARE NOTHING.'],hurt:['IMPOSSIBLE.'],win:['CONSUMED.']},
+  empress:    {idle:['Winter comes for you.','So very cold.'],hurt:['Insolent!'],win:['Frozen forever.']},
+};
+let chatterCool=0;
+function maybeChatter(e){
+  if(chatterCool>0){chatterCool--;return;}
+  if(bubble)return;                              // never talk over another bubble
+  if(Math.random()>0.28)return;
+  const C=CHATTER[e.baseId||e.id];
+  if(!C)return;
+  let pool=C.idle;
+  const hurt=e.hp/e.maxhp<.4;
+  const winning=P.hp/P.maxhp<.45;
+  if(hurt&&C.hurt&&Math.random()<.7)pool=C.hurt;
+  else if(winning&&C.win&&Math.random()<.6)pool=C.win;
+  if(!pool||!pool.length)return;
+  say2(e,pick(pool),1.7);
+  chatterCool=2;                                 // a beat of quiet between quips
+  tone(300+ri(0,200),260,.06,'square',.05);
+}
 function enemyReact(e,kind){
   if(e.sq===undefined)enemyAnimInit(e);
   if(kind==='hit'){e.sq=.22;e.sqV=0;e.hop=-9;e.hopV=-140;e.tilt=.16;e.expr='hurt';e.exprT=.75;}
@@ -2775,13 +3006,34 @@ function applyBoon(id){
 }
 function pDef(){
   const A=ARMORS[P.arm];
-  let d=A.def+Math.floor(statOf('end')*0.45);
+  let d=A.def+Math.round(statOf('end')*0.6);   // every single point of END now counts
   if(overloaded())d=Math.floor(d*0.6);         // plate you cannot carry protects you poorly
   return d+(hasStatus(P,'protect')?6:0);
 }
+/* ---- (6) THE FORGE: reinforce a weapon +1 … +5 with Battle Points ---- */
+const MAX_PLUS=5;
+function plusOf(i){return (P&&P.plus&&P.plus[i==null?P.wpn:i])||0;}
+// each +1 adds a chunk of the weapon's own base — heavy weapons gain more
+function plusStep(w){return Math.max(2,Math.round(w.base*0.16));}
+function plusDamage(i){
+  i=(i==null)?P.wpn:i;
+  return plusOf(i)*plusStep(WEAPONS[i]);
+}
+function forgeCost(i){
+  i=(i==null)?P.wpn:i;
+  const p=plusOf(i);
+  if(p>=MAX_PLUS)return null;
+  // reinforcing gets steeper, and better weapons cost more to work
+  return Math.round((180+p*220)*(1+WEAPONS[i].base/40));
+}
+function weaponName(i){
+  i=(i==null)?P.wpn:i;
+  const p=plusOf(i);
+  return WEAPONS[i].n+(p?' +'+p:'');
+}
 function pAtk(){
   const w=WEAPONS[P.wpn];
-  let a=w.base+scaleBonus(w.scale);
+  let a=w.base+plusDamage()+scaleBonus(w.scale);
   if(!meetsReq(w.req))a*=0.35;                 // wielding what you cannot lift
   if(overloaded())a*=0.85;
   return a*(hasStatus(P,'focus')?1.35:1);
@@ -3493,7 +3745,7 @@ function updateStatus(){
   $('#lbbar').classList.toggle('full',P.limit>=100);
   $('#roundlbl').textContent=combo>=2?'COMBO ×'+combo:'BATTLE '+round;
   const wI=WEAPON_ELEM_ICON[weaponElem()];
-  $('#gear').innerHTML=(wI?ic(wI,12)+' ':'')+WEAPONS[P.wpn].n+' · '+ARMORS[P.arm].n+(P.relic?' · '+ic(RELICS[P.relic].icon,12):'');
+  $('#gear').innerHTML=(wI?ic(wI,12)+' ':'')+weaponName()+' · '+ARMORS[P.arm].n+(P.relic?' · '+ic(RELICS[P.relic].icon,12):'');
   updateRibbon();
   updateHUD();
   // screen-space boss/elite health bar
@@ -3569,7 +3821,12 @@ function showMenu(items,cb){
   menuItems=items;menuSel=items.findIndex(i=>!i.dis);if(menuSel<0)menuSel=0;menuCb=cb;
   cmdwin.innerHTML='';
   // on a phone, 3+ commands go two-up so every button stays thumb-sized
-  cmdwin.classList.toggle('grid',isTouch()&&items.length>=3);
+  // The grid's column count follows the number of options, so two choices give
+  // two neat buttons — never two full-width slabs.
+  const n=items.length;
+  const cols=n<=1?1 : n<=2?2 : n<=4?n : n<=6?3 : n<=8?4 : 5;
+  cmdwin.style.setProperty('--cols',cols);
+  cmdwin.classList.toggle('dense',n>8);
   requestAnimationFrame(syncCmdHeight);
   items.forEach((it,i)=>{
     const b=document.createElement('button');
@@ -3584,7 +3841,7 @@ function showMenu(items,cb){
   refreshSel();
 }
 function refreshSel(){[...cmdwin.children].forEach((b,i)=>b.classList.toggle('sel',i===menuSel));}
-function clearMenu(){cmdwin.innerHTML='';cmdwin.classList.remove('grid');menuItems=[];menuCb=null;syncCmdHeight();}
+function clearMenu(){cmdwin.innerHTML='';cmdwin.classList.remove('dense');menuItems=[];menuCb=null;syncCmdHeight();}
 /* The command bar's height changes with the menu, so on phones we measure it and
    publish it as --cmdh. The status strip sits above that, never on top of it. */
 /* ---- make the game box exactly fit what the user can actually SEE ---- */
@@ -3815,6 +4072,7 @@ function onEnemyDefeated(e,c,killingBlow,rawDmg){
   if(killingBlow>=e.maxhp*.4){bp+=Math.round(killingBlow);addPopup(c.x,c.y-96,'OVERKILL! +'+Math.round(killingBlow),'#ff8ad0');}
   score+=bp;addPopup(c.x,c.y-70,'+'+bp,'#e8cc88');
   LT.kills=(LT.kills||0)+1;
+  bestiaryRecord(e);
   if(e.phase2||e.phased)LT.champions=(LT.champions||0)+1;
   else if(e.boss)LT.bosses=(LT.bosses||0)+1;
   saveLT();
@@ -4147,7 +4405,7 @@ async function startRound(){
   bstat={items:0,noHit:true};
   // apply the handicap dealt by the slot
   handicap=pendingHandicap;pendingHandicap=null;
-  hazard=null;crate=null;crowdHype=0;bubble=null;toons=[];podium=null;cine=null;
+  hazard=null;crate=null;crowdHype=0;bubble=null;toons=[];podium=null;cine=null;chatterCool=0;
   P.pose=null;P.animPose='idle';P.st={};P.critUp=P.critUp||0;
   P.sLean=0;P.sVel=0;P.sqz=0;P.sqzV=0;
   spawnEnemies();
@@ -4155,6 +4413,8 @@ async function startRound(){
   if(handicap==='silence')P.mp=0;
   updateStatus();clearMenu();
   gameState='battle';
+  hideOverlay();
+  battleHUD(true);            // <-- the HUD must come back now that we ARE in battle
   if(round===1&&!LT.tut){await showTutorial();}
   if(round===1&&!LT.cine){             // the broadcast opens on the arena — first run only
     LT.cine=1;saveLT();
@@ -4506,6 +4766,7 @@ async function enemyPhase(opening){
       await say(e.name+' is frozen solid!',720);clearMsg();continue;
     }
     const silenced=hasStatus(e,'silence');
+    if(!silenced)maybeChatter(e);              // a quip before it swings
     // release a telegraphed charge from last turn
     if(e.charging){
       const move=e.charging;e.charging=null;
@@ -4682,12 +4943,16 @@ async function roundWon(){
   await showBPReceipt(lines,total);
   score+=total;updateStatus();
   for(const a of newAch){callout(a.name.toUpperCase(),'#ffd23a');SFX.fanfare();await sleep(900);}
-  // ---- spend what you earned: this is where the build happens ----
-  await levelUp();
   // ---- gauntlet milestone ----
   if(round===GAUNTLET){await gauntletClear();}
-  // ---- the slot ----
-  await showSlot();
+  // ---- FIVE WHEELS: five rewards spin up, you take one ----
+  await showWheels();
+  // ---- THE SHOP: spend this run's Battle Points ----
+  await runShop();
+  // ---- spend attribute points (from the battle, the wheel, and the shop) ----
+  await levelUp();
+  // ---- and into the next battle ----
+  startRound();
 }
 let flawlessStreak=0;
 let handicapCleared=false;
@@ -4697,7 +4962,7 @@ async function showBPReceipt(lines,total){
   sheet.innerHTML='<div class="slot-title" style="font-size:clamp(16px,3.6vmin,28px)">BATTLE POINTS</div><hr class="rule">'+
     rows+'<div class="sumrow" style="margin:1.4% 14% .4%;border-top:1px solid rgba(255,70,200,.4);padding-top:1.2%">'+
     '<span style="color:#ffe25a">TOTAL BP</span><b style="color:#ffe25a">+'+total+'</b></div>'+
-    '<button class="mbtn" id="bTally">Spin the Reels ▸</button>';
+    '<button class="mbtn" id="bTally">To the Wheels ▸</button>';
   showOverlay();
   // tally sound sweep
   let i=0;const iv=setInterval(()=>{tone(600+i*40,600+i*40,.05,'triangle',.1);if(++i>lines.length)clearInterval(iv);},110);
@@ -4905,27 +5170,47 @@ async function playCine(){
    LEVEL UP — every battle earns attribute points. Spending them is how you
    craft the character: nothing is chosen for you at the start.
    ========================================================================== */
+/* Show exactly what one more point buys. Decimals matter here: a D-grade
+   weapon gains +0.3 ATK per point, and rounding that to a whole number made it
+   look like the point did nothing at all. */
 function statRow(a){
   const v=P.stats[a.id];
-  // show what this point would actually DO
+  // measure the real before/after by temporarily bumping the stat
+  const probe=(fn)=>{
+    const before=fn();
+    const save=P.stats[a.id];P.stats[a.id]=v+1;
+    const after=fn();
+    P.stats[a.id]=save;
+    return[before,after];
+  };
+  const d1=(n)=>(Math.round(n*10)/10).toFixed(1).replace(/\.0$/,'');
   let effect='';
-  if(a.id==='vig')effect='HP '+P.maxhp+' → '+maxHPFor({...P.stats,vig:v+1});
-  else if(a.id==='atn')effect='MP '+P.maxmp+' → '+maxMPFor({...P.stats,atn:v+1});
-  else if(a.id==='end'){const cur=pDef();effect='DEF '+cur+' → '+(ARMORS[P.arm].def+Math.floor((v+1)*0.45));}
-  else if(a.id==='dex')effect='CRIT '+Math.round(critChance()*100)+'% → '+Math.round(clamp(0.04+(v+1)*0.005+(WEAPONS[P.wpn].crit||0)+(P.critUp||0),0,.65)*100)+'%';
+  if(a.id==='vig'){const[b,c]=probe(()=>maxHPFor(P.stats));effect='HP '+b+' → '+c;}
+  else if(a.id==='atn'){const[b,c]=probe(()=>maxMPFor(P.stats));effect='MP '+b+' → '+c;}
+  else if(a.id==='end'){
+    const[b,c]=probe(pDef);
+    effect='DEF '+b+' → '+c+(overloaded()?'  · overloaded':'');
+  }
+  else if(a.id==='dex'){
+    const[b,c]=probe(critChance);
+    const[ab,ac]=probe(pAtk);
+    effect='CRIT '+d1(b*100)+'% → '+d1(c*100)+'%'+(ac>ab+0.01?'  · ATK '+d1(ab)+' → '+d1(ac):'');
+  }
   else{
     const w=WEAPONS[P.wpn];
     const g=w.scale&&w.scale[a.id];
-    if(g){const before=Math.round(pAtk());
-      const save=P.stats[a.id];P.stats[a.id]=v+1;const after=Math.round(pAtk());P.stats[a.id]=save;
-      effect='ATK '+before+' → '+after+'  ('+a.abbr+' '+g+')';}
-    else effect=a.desc;
+    const[b,c]=probe(pAtk);
+    if(c>b+0.01)effect='ATK '+d1(b)+' → '+d1(c)+(g?'  ('+a.abbr+' '+g+')':'');
+    else effect=a.desc+'  · your '+w.n+' does not scale with '+a.abbr;
   }
+  // a bar showing how far this attribute has come (soft cap at 40)
+  const pctv=clamp(v/40*100,0,100);
   return '<button class="statrow" data-s="'+a.id+'">'+
     '<span class="si">'+ic(a.icon,18)+'</span>'+
     '<span class="sn">'+a.name+'</span>'+
-    '<span class="sv">'+v+'</span>'+
+    '<span class="sv" data-v="'+v+'">'+v+'</span>'+
     '<span class="sp">+</span>'+
+    '<span class="sbar"><i style="width:'+pctv.toFixed(1)+'%"></i></span>'+
     '<span class="se">'+effect+'</span>'+
   '</button>';
 }
@@ -4936,16 +5221,40 @@ function levelUpHTML(){
     '<hr class="rule">'+
     '<div class="statgridup">'+ATTRS.map(statRow).join('')+'</div>'+
     '<div class="subtitle" style="font-size:clamp(10px,1.7vmin,13px);color:#b8aecc">'+
-      WEAPONS[P.wpn].n+' · '+scaleText(WEAPONS[P.wpn].scale)+
+      weaponName()+' · '+scaleText(WEAPONS[P.wpn].scale)+
       (overloaded()?' · <span style="color:#ff8a8a">OVERLOADED</span>':'')+'</div>'+
-    '<button class="mbtn" id="luDone">'+(P.points>0?'Save the rest':'Continue')+'</button>';
+    '<button class="mbtn" id="luDone">'+(P.points>0?'Save the rest · Fight ▸':'Fight ▸')+'</button>';
+}
+// count a number up rather than snapping it
+function tickNumber(el,from,to,ms){
+  if(!el)return;
+  const t0=performance.now();
+  const step=(now)=>{
+    const p=clamp((now-t0)/ms,0,1);
+    const e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(from+(to-from)*e);
+    if(p<1)requestAnimationFrame(step);else el.textContent=to;
+  };
+  requestAnimationFrame(step);
 }
 function levelUp(){
   return new Promise(res=>{
     if(P.points<=0){res();return;}
     gameState='levelup';
-    const draw=()=>{
+    const draw=(justRaised)=>{
       sheet.innerHTML=levelUpHTML();
+      sheet.querySelectorAll('.statrow').forEach(b=>{
+        // the row that just gained a point flashes, its bar grows, its number ticks
+        if(justRaised&&b.dataset.s===justRaised){
+          b.classList.add('gained');
+          const sv=b.querySelector('.sv'), bar=b.querySelector('.sbar i');
+          const to=+sv.dataset.v, from=to-1;
+          sv.textContent=from;
+          if(bar){bar.style.width=clamp(from/40*100,0,100)+'%';
+            requestAnimationFrame(()=>{bar.style.width=clamp(to/40*100,0,100)+'%';});}
+          tickNumber(sv,from,to,320);
+        }
+      });
       sheet.querySelectorAll('.statrow').forEach(b=>{
         b.addEventListener('click',()=>{
           if(P.points<=0){SFX.err();return;}
@@ -4954,8 +5263,7 @@ function levelUp(){
           SFX.powerup();buzz(20);
           const A=ATTRS.find(x=>x.id===b.dataset.s);
           callout(A.abbr+' +1','#ffd23a');
-          if(P.points>0)draw();
-          else{draw();}
+          draw(b.dataset.s);
         });
       });
       $('#luDone').addEventListener('click',()=>{SFX.ok();hideOverlay();res();});
@@ -4971,7 +5279,7 @@ function buildSheetHTML(){
   return '<div class="slot-title" style="font-size:clamp(16px,3.6vmin,28px)">YOUR BUILD</div><hr class="rule">'+
     '<div class="statgrid">'+ATTRS.map(row).join('')+'</div>'+
     '<div class="rules" style="text-align:left">'+
-      '<b>'+w.n+'</b> — DMG '+w.base+' · '+scaleText(w.scale)+
+      '<b>'+weaponName()+'</b> — DMG '+(w.base+plusDamage())+' · '+scaleText(w.scale)+
         (w.req?(meetsReq(w.req)?' · <span style="color:#8cf0a0">requirements met</span>':' · <span style="color:#ff8a8a">UNDER-WIELDED (‑65% damage)</span>'):'')+'<br>'+
       '<b>'+a.n+'</b> — DEF '+a.def+
         (a.reqEnd?(overloaded()?' · <span style="color:#ff8a8a">OVERLOADED (‑40% DEF, ‑40% crit)</span>':' · <span style="color:#8cf0a0">carried well</span>'):'')+'<br>'+
@@ -4984,6 +5292,108 @@ function buildSheetHTML(){
 function openBuildSheet(back){
   openModal(buildSheetHTML());
   $('#bsBack').addEventListener('click',()=>{SFX.back();back();});
+}
+/* The Forge — offered between battles. Spend the BP you have earned this run to
+   reinforce the weapon you are actually carrying. */
+function forgeHTML(){
+  const i=P.wpn,w=WEAPONS[i],p=plusOf(i);
+  const cost=forgeCost(i);
+  const step=plusStep(w);
+  const atkNow=Math.round(pAtk());
+  // what it would hit for at +1 more
+  let atkNext=atkNow;
+  if(cost!==null){P.plus=P.plus||{};P.plus[i]=p+1;atkNext=Math.round(pAtk());P.plus[i]=p;}
+  const pips=[];
+  for(let k=1;k<=MAX_PLUS;k++)
+    pips.push('<span class="pip'+(k<=p?' lit':'')+'"></span>');
+  return '<div class="slot-title" style="font-size:clamp(16px,3.6vmin,28px)">THE FORGE</div>'+
+    '<div class="subtitle" style="font-size:clamp(11px,2vmin,15px)">Reinforce the weapon in your hands</div>'+
+    '<hr class="rule">'+
+    '<div class="forge">'+
+      '<div class="fname">'+weaponName(i)+'</div>'+
+      '<div class="fpips">'+pips.join('')+'</div>'+
+      '<div class="frow"><span>Attack</span><b>'+atkNow+
+        (cost!==null?' <span style="color:#8cf0a0">→ '+atkNext+'</span>':'')+'</b></div>'+
+      '<div class="frow"><span>Scaling</span><b>'+scaleText(w.scale)+'</b></div>'+
+      (cost!==null
+        ? '<div class="frow"><span>Reinforce to +'+(p+1)+'</span><b style="color:#ffe25a">'+cost+' BP</b></div>'
+        : '<div class="frow"><span>Fully reinforced</span><b style="color:#ffd23a">+'+MAX_PLUS+'</b></div>')+
+      '<div class="frow"><span>Battle Points</span><b style="color:#ffe25a">'+score+'</b></div>'+
+    '</div>'+
+    (cost!==null
+      ? '<button class="mbtn" id="fgDo"'+(score<cost?' disabled style="opacity:.45"':'')+'>'+
+          (score<cost?'Not enough BP':'Reinforce  (+'+step+' ATK)')+'</button>'
+      : '')+
+    '<button class="mbtn" id="fgSkip">Leave the Forge</button>';
+}
+/* ============================================================================
+   THE SHOP — between battles, spend the Battle Points you have earned THIS RUN.
+   Reinforcing your weapon lives here too.
+   ========================================================================== */
+function shopStock(){
+  const st=[];
+  st.push({id:'potion',icon:'potion',name:'Potion',desc:'Restores 45 HP',cost:120});
+  st.push({id:'ether', icon:'orb',   name:'Ether', desc:'Restores 20 MP',cost:150});
+  const i=P.wpn, fc=forgeCost(i);
+  if(fc!==null){
+    st.push({id:'forge',icon:'sword',name:'Reinforce '+weaponName(i),
+      desc:'+'+plusStep(WEAPONS[i])+' Attack  ('+weaponName(i)+' → '+WEAPONS[i].n+' +'+(plusOf(i)+1)+')',cost:fc});
+  }
+  st.push({id:'point',icon:'sparkle',name:'Attribute Point',desc:'One point to spend as you like',
+    cost:400+ (P.bought||0)*260});
+  st.push({id:'mend',icon:'heart',name:'Field Mend',desc:'Restore 50% of your max HP',
+    cost:Math.round(200+P.maxhp*1.2)});
+  return st;
+}
+function shopHTML(){
+  const cards=shopStock().map(it=>{
+    const afford=score>=it.cost;
+    return '<button class="shopit'+(afford?'':' poor')+'" data-i="'+it.id+'"'+(afford?'':' disabled')+'>'+
+      '<span class="sico">'+ic(it.icon,24)+'</span>'+
+      '<span class="sname">'+it.name+'</span>'+
+      '<span class="sdesc">'+it.desc+'</span>'+
+      '<span class="scost">'+it.cost+' BP</span>'+
+    '</button>';
+  }).join('');
+  return '<div class="slot-title" style="font-size:clamp(16px,3.6vmin,28px)">THE SHOP</div>'+
+    '<div class="subtitle" style="font-size:clamp(11px,2vmin,15px)">Battle Points: '+
+      '<b style="color:#ffe25a">'+score+'</b></div>'+
+    '<hr class="rule">'+
+    '<div class="shopgrid">'+cards+'</div>'+
+    '<button class="mbtn" id="shopGo">Done shopping ▸</button>';
+}
+function runShop(){
+  return new Promise(res=>{
+    gameState='shop';
+    const draw=()=>{
+      sheet.innerHTML=shopHTML();
+      sheet.querySelectorAll('.shopit').forEach(b=>{
+        b.addEventListener('click',()=>{
+          const it=shopStock().find(x=>x.id===b.dataset.i);
+          if(!it||score<it.cost){SFX.err();return;}
+          score-=it.cost;
+          if(it.id==='potion')P.items.potion=(P.items.potion||0)+1;
+          else if(it.id==='ether')P.items.ether=(P.items.ether||0)+1;
+          else if(it.id==='forge'){P.plus=P.plus||{};P.plus[P.wpn]=plusOf(P.wpn)+1;
+            callout(weaponName(),'#ffe25a');}
+          else if(it.id==='point'){P.points=(P.points||0)+1;P.bought=(P.bought||0)+1;
+            callout('ATTRIBUTE POINT','#ffd23a');}
+          else if(it.id==='mend'){P.hp=Math.min(P.maxhp,P.hp+Math.round(P.maxhp*.5));
+            callout('MENDED','#8cf0a0');}
+          SFX.powerup();buzz(25);
+          recalcStats();updateStatus();
+          draw();
+        });
+      });
+      $('#shopGo').addEventListener('click',()=>{
+        SFX.ok();
+        hideOverlay();
+        res();          // any points you bought are spent on the level-up screen next
+      });
+    };
+    draw();
+    showOverlay();
+  });
 }
 async function gauntletClear(){
   gameState='gauntlet';
@@ -5012,8 +5422,23 @@ async function gauntletClear(){
 
 /* ============================ SLOT MACHINE ============================ */
 const overlay=$('#overlay'),sheet=$('#sheet');
-function hideOverlay(){overlay.classList.add('hidden');}
-function showOverlay(){overlay.classList.remove('hidden');}
+function hideOverlay(){
+  overlay.classList.add('hidden');
+  battleHUD(true);
+}
+function showOverlay(){
+  overlay.classList.remove('hidden');
+  battleHUD(false);          // the status strip and commands must not sit over a panel
+}
+function battleHUD(show){
+  const inBattle=(gameState==='battle');
+  const v=(show&&inBattle)?'visible':'hidden';
+  const c=$('#cmdwin'),st=$('#statwin'),hd=$('#hud'),pb=$('#pausebtn');
+  if(c)c.style.visibility=v;
+  if(st)st.style.visibility=v;
+  if(hd)hd.classList.toggle('hidden',!(show&&inBattle));
+  if(pb)pb.classList.toggle('hidden',!(show&&inBattle));
+}
 const REEL_SYMS=['sword','shield','book','heart','gem','orb','potion','frog','burst','skull','angry','coin','sparkle','swords'];
 const MED_HC=['frog','bleed','silence','weaken','venom','sealed','doublecost','dazed'];
 const HARD_HC=['fragile','fury','berserk','overload','venom'];
@@ -5027,31 +5452,36 @@ const RARITY={
 // what a boon is actually worth decides how rare it reads
 function boonRarity(b){
   const id=b.id||'';
-  if(id.startsWith('relic:'))          return 'legendary';
-  if(id==='wpn'||id==='arm')           return 'epic';
-  if(id==='maxhp40')                   return 'epic';
+  if(id.startsWith('relic:'))return 'legendary';
+  if(id.startsWith('wpn:')){
+    const w=WEAPONS[+id.split(':')[1]];
+    if(!w)return 'rare';
+    if(w.base>=26)return 'legendary';        // Ruin Cleaver, Excalibur
+    if(w.base>=13)return 'epic';             // the real upgrades
+    return 'rare';                           // catalysts and light blades
+  }
+  if(id.startsWith('arm:')){
+    const a=ARMORS[+id.split(':')[1]];
+    if(!a)return 'rare';
+    if(a.def>=24)return 'legendary';         // Aegis Plate
+    if(a.def>=16)return 'epic';              // Knight Plate
+    if(a.def>=10||a.spellBonus)return 'rare';
+    return 'common';
+  }
   if(id.startsWith('spell:')){
     const sp=SPELLS[id.split(':')[1]];
-    if(sp&&sp.mp>=20)                  return 'legendary';
-    if(sp&&sp.mp>=13)                  return 'epic';
+    if(sp&&sp.mp>=24)return 'legendary';
+    if(sp&&sp.mp>=13)return 'epic';
     return 'rare';
   }
-  if(id==='maxhp'||id==='maxmp'||id==='atk'||id==='mag') return 'rare';
-  if(id.startsWith('bp:')){
-    const amt=+id.split(':')[1];
-    return amt>=300?'rare':'common';
+  if(id.startsWith('stat:')){
+    const n=+id.split(':')[2];
+    if(n>=3)return 'epic';
+    if(n>=2)return 'rare';
+    return 'common';
   }
+  if(id.startsWith('bp:'))return (+id.split(':')[1])>=300?'rare':'common';
   return 'common';
-}
-function rollWagers(){
-  const jackpot=Math.random()<(0.08+Math.min(round,12)*0.008);
-  const cards=[];
-  cards.push({klass:'safe',head:'PLAY IT SAFE',hc:null,boon:makeBoon(1)});
-  cards.push({klass:'gamble',head:'GAMBLE',hc:pick(MED_HC),boon:makeBoon(2)});
-  if(jackpot)cards.push({klass:'jackpot',head:'7-7-7 JACKPOT',hc:null,boon:makeBoon(3),jp:200+round*40});
-  else cards.push({klass:'wild',head:'HIGH ROLL',hc:pick(HARD_HC),boon:makeBoon(3)});
-  for(const c of cards)c.rarity=boonRarity(c.boon);
-  return cards;
 }
 /* ============================================================================
    THE REELS — a physical drum: it winds back, rips into a blurred spin,
@@ -5060,7 +5490,8 @@ function rollWagers(){
    ========================================================================== */
 function buildReelStrip(reel,finalSym,spins,idx,tease){
   const strip=reel.querySelector('.strip');
-  const reelH=reel.clientHeight||100;
+  // if layout hasn't settled the reel can measure 0 — never let that collapse the drum
+  const reelH=Math.max(60,reel.clientHeight||0)||96;
   // cells are shorter than the window, so you catch the symbols above and below
   // rushing past — that is what sells it as a turning drum rather than a flicker
   const cellH=Math.max(28,Math.round(reelH*0.62));
@@ -5081,7 +5512,7 @@ function buildReelStrip(reel,finalSym,spins,idx,tease){
   // give the drum a small top pad so cell 0 starts centred on the payline
   strip.style.paddingTop=((reelH-cellH)/2)+'px';
   strip.style.transform='translateY(0px)';
-  strip.style.filter='url(#reelblur'+idx+')';
+  strip.style.filter='none';
   return{strip,cellH,total,reelH};
 }
 function spinReel(reel,finalSym,dur,idx,opts){
@@ -5091,7 +5522,6 @@ function spinReel(reel,finalSym,dur,idx,opts){
     const{strip,cellH,total}=buildReelStrip(reel,finalSym,spins,idx,opts.tease);
     // scroll so the LAST cell comes to rest exactly on the payline
     const D=(total-1)*cellH;
-    const blurNode=document.getElementById('reelblurG'+idx);
 
     // --- (4) NEAR-MISS TEASE: the drum almost stops one symbol short of the
     //     prize, hangs there, then creeps the last notch home ---
@@ -5147,14 +5577,14 @@ function spinReel(reel,finalSym,dur,idx,opts){
         if(p>=1)y=D;
       }
 
-      // --- speed drives the motion blur AND a subtle vertical stretch ---
+      // --- speed drives the motion blur AND a vertical stretch ---
       const vel=Math.abs(y-prevY);prevY=y;
-      const stretch=1+clamp(vel*0.0035,0,0.10);
+      // stretching the strip as it flies IS the motion smear — it works everywhere,
+      // unlike an SVG filter, and reads better on a small screen
+      const stretch=1+clamp(vel*0.010,0,0.35);
       strip.style.transform='translateY(-'+y.toFixed(2)+'px) scaleY('+stretch.toFixed(3)+')';
-      if(blurNode){
-        const blur=clamp(vel*0.30,0,11);     // vertical-only smear, like a real drum
-        blurNode.setAttribute('stdDeviation','0 '+blur.toFixed(2));
-      }
+      const blur=clamp(vel*0.16,0,5);
+      strip.style.filter=blur>0.4?'blur('+blur.toFixed(1)+'px)':'none';
 
       // --- a tick each time a symbol crosses the payline; they slow and deepen ---
       const cellIdx=Math.floor(y/cellH);
@@ -5168,7 +5598,7 @@ function spinReel(reel,finalSym,dur,idx,opts){
       if(t<total_t)requestAnimationFrame(frame);
       else{
         strip.style.transform='translateY(-'+D.toFixed(2)+'px) scaleY(1)';
-        if(blurNode)blurNode.setAttribute('stdDeviation','0 0');
+        strip.style.filter='none';
         reel.classList.add('locked','pop');
         setTimeout(()=>reel.classList.remove('pop'),320);
         tone(300,150,.16,'square',.20);      // the clunk of the drum locking home
@@ -5180,117 +5610,96 @@ function spinReel(reel,finalSym,dur,idx,opts){
     requestAnimationFrame(frame);
   });
 }
-async function showSlot(){
+/* ============================================================================
+   THE PRIZE WHEELS — five drums spin up, each landing on a reward. You take
+   exactly one. Stats, weapons, armour, spells, items: the whole build lives here.
+   ========================================================================== */
+function rollPrizes(){
+  const out=[],seen=new Set();
+  // a spread of tiers so there is always something humble and something greedy
+  const tiers=[1,2,2,3,3];
+  for(const t of tiers){
+    let b=null;
+    for(let tries=0;tries<12;tries++){
+      b=makeBoon(t);
+      if(!seen.has(b.id))break;
+    }
+    seen.add(b.id);
+    b.rarity=boonRarity(b);
+    out.push(b);
+  }
+  // shuffle so the good one isn't always on the right
+  for(let i=out.length-1;i>0;i--){const j=ri(0,i);[out[i],out[j]]=[out[j],out[i]];}
+  return out;
+}
+async function showWheels(){
   gameState='slot';
-  let rerollLeft=SHOP.owned.reroll?1:0;
-  await runSlot(rollWagers(),rerollLeft);
+  const rerolls=SHOP.owned.reroll?1:0;
+  await runWheels(rollPrizes(),rerolls);
 }
-async function runSlot(wagers,rerollLeft){
-  const jackpot=wagers[2].klass==='jackpot';
-  const reelHTML='<div class="reel"><div class="strip"></div><div class="payline"></div></div>';
-  // one vertical-blur filter per drum, driven live from the spin's velocity
-  const filters='<svg width="0" height="0" style="position:absolute"><defs>'+
-    [0,1,2].map(i=>'<filter id="reelblur'+i+'" x="-20%" y="-20%" width="140%" height="140%">'+
-      '<feGaussianBlur id="reelblurG'+i+'" stdDeviation="0 0"/></filter>').join('')+
-    '</defs></svg>';
-  sheet.innerHTML=
-    '<div class="slot-title">HANDICAP REELS</div>'+
-    '<div class="subtitle" style="font-size:clamp(11px,1.9vmin,15px);margin-bottom:0">The reels deal the hand — you choose how to play it</div>'+
-    filters+
-    '<div class="reels" id="reels">'+reelHTML+reelHTML+reelHTML+'</div>'+
-    '<div class="wagers" id="wagers"></div>'+
-    (rerollLeft>0?'<button class="mbtn" id="reroll" style="min-width:38%;padding:1% 3%;font-size:clamp(12px,2.2vmin,17px)">'+ic('reroll',15)+' Re-spin ('+rerollLeft+')</button>':'');
-  showOverlay();
-  const reels=[...sheet.querySelectorAll('.reel')];
-  const finals=jackpot?['seven','seven','seven']
-    :[wagers[0].boon.icon,(wagers[1].hc?HANDICAPS[wagers[1].hc].icon:'coin'),wagers[2].boon.icon];
-  // the lever: a rising whirr as all three drums tear away together
-  SFX.ok();
-  tone(180,760,.5,'sawtooth',.10);
+function runWheels(prizes,rerollLeft){
+  return new Promise(resolve=>{
+    const reelHTML='<div class="reel"><div class="strip"></div><div class="payline"></div></div>';
+    sheet.innerHTML=
+      '<div class="slot-title">THE PRIZE WHEELS</div>'+
+      '<div class="subtitle" style="font-size:clamp(11px,1.9vmin,15px);margin-bottom:0">'+
+        'Five rewards. You may take <b style="color:#ffd23a">one</b>.</div>'+
+      '<div class="reels w5" id="reels">'+reelHTML.repeat(5)+'</div>'+
+      '<div class="prizes" id="prizes"></div>'+
+      (rerollLeft>0?'<button class="mbtn" id="reroll" style="min-width:34%;padding:1% 3%;font-size:clamp(12px,2.2vmin,17px)">'+
+        ic('reroll',15)+' Re-spin ('+rerollLeft+')</button>':'');
+    showOverlay();
 
-  // --- reels one and two stop first ---
-  await Promise.all([
-    spinReel(reels[0],finals[0],1500,0),
-    spinReel(reels[1],finals[1],2200,1),
-  ]);
+    const reels=[...sheet.querySelectorAll('.reel')];
+    SFX.ok();
+    tone(180,760,.6,'sawtooth',.10);
 
-  // --- (5) ANTICIPATION: two 7s showing means the third could pay out.
-  //     The cabinet goes gold, the music drops to a held drone, and the last
-  //     drum grinds on far longer than it should. ---
-  const twoSevens=(finals[0]==='seven'&&finals[1]==='seven');
-  let lastDur=3100-2200+900;      // its normal remaining spin
-  if(twoSevens){
-    $('#reels').classList.add('anticipate');
-    reels[2].classList.add('anticipate');
-    stopMusic();
-    tone(110,110,2.6,'sawtooth',.09);     // the held, nerve-shredding drone
-    tone(165,165,2.6,'triangle',.05);
-    callout('TWO SEVENS…','#ffe25a');
-    buzz([0,25,120,25,120,25]);
-    lastDur=3400;                          // it drags it out
-  }
-
-  // --- (4) a near-miss tease: sometimes it stalls one symbol short ---
-  const tease=twoSevens ? true : (!jackpot && Math.random()<0.22);
-  await spinReel(reels[2],finals[2],lastDur,2,{tease});
-
-  $('#reels').classList.remove('anticipate');
-  reels[2].classList.remove('anticipate');
-
-  if(jackpot){
-    $('#reels').classList.add('jackpot');
-    SFX.fanfare();callout('JACKPOT','#ffe25a');buzz([0,60,70,60,70,110]);
-  }else{
-    if(twoSevens){callout('SO CLOSE','#9aa2b8');tone(200,90,.5,'sawtooth',.12);}
-    SFX.powerup();
-  }
-  if(!muted)startMusic(musicTheme||'title');
-  revealWagers(wagers);
-  if(rerollLeft>0){const rb=$('#reroll');if(rb)rb.addEventListener('click',()=>{SFX.ok();runSlot(rollWagers(),rerollLeft-1);});}
-}
-function revealWagers(wagers){
-  const box=$('#wagers');box.innerHTML='';
-  wagers.forEach((w,idx)=>{
-    const b=document.createElement('button');
-    const R=RARITY[w.rarity]||RARITY.common;
-    b.className='wager '+w.klass+' rar-'+w.rarity;
-    b.style.setProperty('--rc',R.col);
-    b.style.setProperty('--rg',R.glow);
-    b.style.animationDelay=(idx*0.16)+'s';
-    const hc=w.hc?HANDICAPS[w.hc]:null;
-    const costHTML=hc
-      ? '<div class="wcost"><span class="wico">'+ic(hc.icon,26)+'</span><span>Next battle:<br><span class="wname" style="color:#ffb0b0">'+hc.name+'</span> — '+hc.desc+'</span></div>'
-      : '<div class="wgain"><span class="wico">'+ic('check',26)+'</span><span>No handicap<br><span style="color:#9aa2b8">a clean fight</span></span></div>';
-    const jpHTML=w.jp?'<div class="wgain" style="margin-top:5%"><span class="wico">'+ic('coin',26)+'</span><span><span class="wname" style="color:#ffe25a">+'+w.jp+' BP</span></span></div>':'';
-    b.innerHTML='<div class="whead">'+w.head+'</div>'+
-      '<div class="rarity">'+R.name+'</div>'+
-      '<div class="wbody">'+
-      costHTML+'<div class="wsep"></div>'+
-      '<div class="wgain"><span class="wico">'+ic(w.boon.icon,26)+'</span><span><span class="wname">'+w.boon.name+'</span><br>'+w.boon.desc+'</span></div>'+
-      jpHTML+'</div>';
-    setTimeout(()=>{
-      const rk=R.rank;
-      tone(420+rk*140,620+rk*220,.18,'triangle',.10+rk*.03);
-      if(rk>=2){tone(880+rk*160,1200,.22,'sine',.08);buzz(rk>=3?[0,30,40,50]:20);}
-      if(rk>=3)SFX.fanfare();
-    },idx*160);
-    b.addEventListener('mouseenter',()=>SFX.move());
-    b.addEventListener('click',()=>{
-      SFX.powerup();
-      applyBoon(w.boon.id);
-      if(w.jp)score+=w.jp;
-      pendingHandicap=w.hc;
-      handicapCleared=!!w.hc; // if you accept a curse, clearing next battle pays out
-      updateStatus();hideOverlay();startRound();
-    });
-    box.appendChild(b);
-    setTimeout(()=>b.classList.add('in'),120+idx*140);
+    // staggered stops, left to right, so the last one carries the tension
+    const stops=[1300,1700,2100,2500,3000];
+    Promise.all(reels.map((r,i)=>spinReel(r,prizes[i].icon,stops[i],i)))
+      .then(()=>{
+        SFX.powerup();
+        revealPrizes(prizes,resolve);
+        if(rerollLeft>0){
+          const rb=$('#reroll');
+          if(rb)rb.addEventListener('click',()=>{SFX.ok();runWheels(rollPrizes(),rerollLeft-1).then(resolve);});
+        }
+      });
   });
 }
-
-/* ============================ SCORES / STORAGE ============================ */
-const SCORE_KEY='endlessSaga.battleSquare.highscores';
-let memScores=[];
+function revealPrizes(prizes,resolve){
+  const box=$('#prizes');box.innerHTML='';
+  prizes.forEach((p,idx)=>{
+    const R=RARITY[p.rarity]||RARITY.common;
+    const b=document.createElement('button');
+    b.className='prize rar-'+p.rarity;
+    b.style.setProperty('--rc',R.col);
+    b.style.setProperty('--rg',R.glow);
+    b.style.animationDelay=(idx*0.09)+'s';
+    b.innerHTML=
+      '<div class="prarity">'+R.name+'</div>'+
+      '<div class="pico">'+ic(p.icon,26)+'</div>'+
+      '<div class="pname">'+p.name+'</div>'+
+      '<div class="pdesc">'+p.desc+'</div>';
+    // a chime that rises with rarity
+    setTimeout(()=>{
+      const rk=R.rank;
+      tone(420+rk*140,620+rk*220,.16,'triangle',.09+rk*.02);
+      if(rk>=2)tone(880+rk*160,1200,.2,'sine',.07);
+      if(rk>=3){SFX.fanfare();buzz([0,30,40,50]);}
+    },idx*95);
+    b.addEventListener('mouseenter',()=>SFX.move());
+    b.addEventListener('click',()=>{
+      SFX.powerup();buzz(30);
+      applyBoon(p.id);
+      callout(p.name.toUpperCase(),(RARITY[p.rarity]||RARITY.common).col);
+      updateStatus();
+      hideOverlay();
+      resolve();
+    });
+    box.appendChild(b);
+  });
+}
 function loadScores(){
   try{const r=localStorage.getItem(SCORE_KEY);memScores=r?JSON.parse(r):[];}
   catch(e){/* private-mode or disabled storage */}
@@ -5383,12 +5792,14 @@ function showTitle(){
    '<div class="subtitle">One fighter. Eight battles. The reels decide your curse —<br><span style="color:#5cf0ff">you decide how to beat it.</span></div>'+
    '<button class="mbtn" id="bStart">Enter the Arena</button>'+
    '<button class="mbtn" id="bScores">Hall of Champions</button>'+
+   '<button class="mbtn" id="bBest">Bestiary</button>'+
    '<button class="mbtn" id="bAch">Achievements</button>'+
    '<button class="mbtn" id="bShop">BP Emporium</button>'+
    '<button class="mbtn" id="bSettings">Settings</button>'+
    '<div class="subtitle" style="margin-top:3%;font-size:clamp(11px,1.9vmin,15px)">↑ ↓ move · Enter confirm · Esc back — or simply tap</div>';
   $('#bStart').addEventListener('click',()=>{SFX.ok();startGame(0);});
   $('#bScores').addEventListener('click',async()=>{SFX.ok();showScores();});
+  $('#bBest').addEventListener('click',()=>{SFX.ok();showBestiary();});
   $('#bAch').addEventListener('click',()=>{SFX.ok();showAchievements();});
   $('#bShop').addEventListener('click',()=>{SFX.ok();openShop();});
   $('#bSettings').addEventListener('click',()=>{SFX.ok();openSettings(showTitle);});
@@ -5430,7 +5841,7 @@ function startGame(charIdx){
   if(charIdx!=null)chosenChar=charIdx;
   P=newPlayer();round=0;score=0;bpShown=0;
   handicap=null;pendingHandicap=null;handicapCleared=false;
-  P.limit=0;P.revive=false;P.relic=null;flawlessStreak=0;
+  P.limit=0;P.revive=false;P.relic=null;P.plus={};flawlessStreak=0;
   applyShopToPlayer();
   LT.runs=(LT.runs||0)+1;saveLT();
   combo=0;battleMaxCombo=0;runMaxCombo=0;
