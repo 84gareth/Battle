@@ -38,10 +38,11 @@
        touch-action:manipulation;-webkit-text-size-adjust:100%;}
   body{display:flex;align-items:center;justify-content:center;
        font-family:'Nunito',system-ui,sans-serif;font-weight:800;color:#fff6e8;}
+  /* NOTE: viewport units lie on mobile Safari (dvh can exceed what you can
+     actually see in landscape), which pushed the command bar off-screen.
+     fitGame() below sets the real pixel size from window.visualViewport. */
   #game{position:relative;aspect-ratio:16/9;
         width:min(100vw,calc(100vh*16/9));
-        width:min(100dvw,calc(100dvh*16/9));
-        max-height:100dvh;
         box-shadow:0 0 80px rgba(0,0,0,.9);}
   #cv{position:absolute;inset:0;width:100%;height:100%;}
 
@@ -67,15 +68,17 @@
     /* the status strip goes ABOVE the thumb bar. Its exact offset is measured in
        JS (--cmdh) because the command bar's height changes with the menu. */
     #statwin{right:2%;left:2%;width:auto;top:auto;
-            bottom:calc(3% + var(--cmdh,16vmin));padding:.8% 2%;
+            bottom:calc(2.5% + var(--cmdh,16vmin));padding:.5% 2% .7%;
+            border-width:3px;border-radius:12px;
             transition:bottom .12s;}
-    /* compact it hard: on a phone this is a strip, not a panel */
-    #statwin .srow{margin:.9% 0;}
-    #statwin .bar{height:9px;border-width:2px;}
-    #pname{font-size:clamp(12px,3.4vw,18px);}
-    #statwin .lbl{font-size:clamp(9px,2.6vw,13px);width:10%;}
-    #statwin .val{font-size:clamp(9px,2.6vw,13px);}
-    #statwin .tiny{font-size:clamp(8px,2.3vw,12px);}
+    /* on a phone this is a slim strip, not a panel */
+    #statwin .srow{margin:.35% 0;gap:2%;}
+    #statwin .bar{height:7px;border-width:2px;border-radius:5px;margin:0 2%;}
+    #statwin .bar i::after{inset:0 0 50% 0;}
+    #pname{font-size:clamp(11px,2.9vw,15px);}
+    #statwin .lbl{font-size:clamp(8px,2.2vw,11px);width:8%;}
+    #statwin .val{font-size:clamp(8px,2.2vw,11px);}
+    #statwin .tiny{font-size:clamp(8px,2.1vw,11px);}
     .cmd{margin:0;padding:3.2% 3% 3.2% 11%;
          font-size:clamp(14px,4vw,20px);border-radius:12px;
          min-height:9.5vmin;display:flex;align-items:center;
@@ -171,11 +174,7 @@
   .sumrow{display:flex;justify-content:space-between;font-size:clamp(13px,2.5vmin,21px);
         margin:.9% 12%;letter-spacing:.08em;}
   .sumrow b{color:var(--gold);font-weight:800;font-family:'Baloo 2',cursive;text-shadow:0 2px 0 var(--stroke);}
-  #mute{position:absolute;top:2.2%;right:1.2%;z-index:20;
-        background:linear-gradient(180deg,#6a4a96,#472f6e);
-        border:3px solid var(--stroke);border-radius:10px;color:#fff;
-        font-family:'Baloo 2',cursive;font-weight:700;box-shadow:0 3px 0 var(--stroke);
-        font-size:clamp(10px,1.8vmin,14px);letter-spacing:.04em;padding:.5% 1.4%;cursor:pointer;}
+
   #pausebtn{position:absolute;top:2.2%;left:1.2%;z-index:20;background:rgba(9,11,18,.6);
         border:1px solid rgba(216,184,120,.35);color:#b8b0a0;font-family:'Baloo 2',cursive;font-weight:800;
         font-size:clamp(13px,2.4vmin,18px);line-height:1;padding:.3% 1.1% .5%;cursor:pointer;}
@@ -232,8 +231,10 @@
   /* ---------- Battle Square casino ---------- */
   /* ---- reference-style portrait HUD in the top corners ---- */
   /* inset so the portraits clear the pause button (left) and sound button (right) */
+  /* inset on the left so the portraits clear the pause button; the right is free
+     now that the sound toggle has moved into the pause menu */
   #hud{position:absolute;top:1.6%;left:0;right:0;z-index:9;display:flex;
-       justify-content:space-between;padding:0 9.5%;pointer-events:none;gap:3%;}
+       justify-content:space-between;padding:0 2% 0 9%;pointer-events:none;gap:3%;}
   #hud.hidden{display:none;}
   .hudside{display:flex;align-items:center;gap:8px;width:44%;min-width:0;}
   .hudside.right{justify-content:flex-end;}
@@ -510,7 +511,6 @@
   <div id="bossbar" class="hidden"><div class="bb-name"></div><div class="bb-track"><i></i></div></div>
   <div id="callout"></div>
   <div id="hcbadge" class="hidden"></div>
-  <button id="mute" title="Toggle sound">SOUND ON</button>
   <button id="pausebtn" class="hidden" title="Menu"></button>
   <div id="overlay"><div class="sheet panel" id="sheet"></div></div>
   <div id="modal" class="hidden"><div class="sheet panel" id="modalsheet"></div></div>
@@ -716,8 +716,11 @@ const SFX={
   powerup(){[392,523,659,784].forEach((f,i)=>tone(f,f,.11,'triangle',.12,i*.07));},
   gameover(){[392,370,349,262].forEach((f,i)=>tone(f,f,.45,'triangle',.14,i*.36));},
 };
-$('#mute').addEventListener('click',()=>{muted=!muted;$('#mute').textContent=muted?'SOUND OFF':'SOUND ON';
-  if(muted){stopMusic();}else{SFX.ok();if(musicTheme)startMusic(musicTheme);}});
+function toggleSound(){
+  muted=!muted;
+  if(muted)stopMusic();
+  else{SFX.ok();if(musicTheme)startMusic(musicTheme);}
+}
 
 /* ============================ MODAL: PAUSE / SETTINGS / RULES ============================ */
 const modalEl=$('#modal'),modalSheet=$('#modalsheet');
@@ -726,6 +729,7 @@ function openModal(html){modalSheet.innerHTML=html;modalEl.classList.remove('hid
 function closeModal(){modalEl.classList.add('hidden');}
 function settingsHTML(back){
   return '<div class="slot-title" style="font-size:clamp(16px,3.6vmin,28px)">SETTINGS</div><hr class="rule">'+
+    '<div class="setrow"><span>Sound</span><button class="tog'+(muted?'':' on')+'" id="sMute">'+(muted?'OFF':'ON')+'</button></div>'+
     '<div class="setrow"><span>Sound FX</span><input type="range" id="sSfx" min="0" max="100" value="'+Math.round(CFG.sfx*100)+'"></div>'+
     '<div class="setrow"><span>Music</span><input type="range" id="sMus" min="0" max="100" value="'+Math.round(CFG.music*100)+'"></div>'+
     '<div class="setrow"><span>Reduce flashing</span><button class="tog'+(CFG.reduceFlash?' on':'')+'" id="sFlash">'+(CFG.reduceFlash?'ON':'OFF')+'</button></div>'+
@@ -738,6 +742,7 @@ function settingsHTML(back){
     '<button class="mbtn" id="sBack">‹ Back</button>';
 }
 function wireSettings(back){
+  $('#sMute').addEventListener('click',()=>{toggleSound();openModal(settingsHTML(back));wireSettings(back);});
   $('#sSfx').addEventListener('input',e=>{CFG.sfx=e.target.value/100;applyVolumes();saveCfg();});
   $('#sMus').addEventListener('input',e=>{CFG.music=e.target.value/100;applyVolumes();saveCfg();});
   $('#sFlash').addEventListener('click',()=>{CFG.reduceFlash=!CFG.reduceFlash;saveCfg();SFX.ok();openModal(settingsHTML(back));wireSettings(back);});
@@ -2578,6 +2583,50 @@ function springStep(dt){
   P.sqzV+=(0-P.sqz)*46*dt;P.sqzV*=Math.pow(0.0022,dt);P.sqz+=P.sqzV*dt;
 }
 function squashHit(amount){if(!P)return;P.sqz=amount;P.sqzV=0;}
+/* ---- RESTORED: these three were lost in an earlier refactor, which is what
+   killed the command menu (startRound calls callout() on every battle). ---- */
+/* Any crash inside the async battle flow used to vanish silently — the command
+   bar simply never appeared and there was no clue why. Surface it loudly. */
+function fatal(err){
+  try{
+    console.error('Battle Square error:',err);
+    const m=$('#modalsheet'),mo=$('#modal');
+    if(m&&mo){
+      m.innerHTML='<div class="slot-title" style="font-size:clamp(15px,3vmin,24px)">SOMETHING BROKE</div>'+
+        '<hr class="rule">'+
+        '<div class="rules" style="text-align:left;word-break:break-word">'+
+          String(err&&err.message||err)+'</div>'+
+        '<button class="mbtn" id="fatalReload">Back to Title</button>';
+      mo.classList.remove('hidden');
+      const b=$('#fatalReload');
+      if(b)b.addEventListener('click',()=>{mo.classList.add('hidden');showTitle();});
+    }
+  }catch(e){}
+}
+addEventListener('error',e=>fatal(e.error||e.message));
+addEventListener('unhandledrejection',e=>fatal(e.reason));
+
+const calloutEl=$('#callout');
+function callout(txt,color){
+  if(!calloutEl)return;
+  calloutEl.textContent=txt;
+  calloutEl.style.color=color||'#ffe25a';
+  calloutEl.classList.remove('pop');
+  void calloutEl.offsetWidth;            // force a reflow so the animation restarts
+  calloutEl.classList.add('pop');
+}
+function bumpCombo(){
+  combo++;
+  battleMaxCombo=Math.max(battleMaxCombo,combo);
+  runMaxCombo=Math.max(runMaxCombo,combo);
+  if(combo>=3&&combo%3===0){
+    callout('COMBO x'+combo,combo>=9?'#ff46c8':'#5cf0ff');
+    hypeCrowd(Math.min(1,combo/12));
+  }
+  updateRibbon();
+}
+function breakCombo(){combo=0;updateRibbon();}
+
 function gainLimit(n){if(!P)return;if(P.relic==='haste')n*=1.4;P.limit=clamp(P.limit+n,0,100);updateStatus();}
 const RELICS={
  regen:{icon:'leaf',name:'Sage Ring',desc:'Regenerate 5% HP each turn'},
@@ -3538,6 +3587,27 @@ function refreshSel(){[...cmdwin.children].forEach((b,i)=>b.classList.toggle('se
 function clearMenu(){cmdwin.innerHTML='';cmdwin.classList.remove('grid');menuItems=[];menuCb=null;syncCmdHeight();}
 /* The command bar's height changes with the menu, so on phones we measure it and
    publish it as --cmdh. The status strip sits above that, never on top of it. */
+/* ---- make the game box exactly fit what the user can actually SEE ---- */
+function fitGame(){
+  const g=$('#game');if(!g)return;
+  const vv=window.visualViewport;
+  const vw=vv?vv.width :document.documentElement.clientWidth;
+  const vh=vv?vv.height:document.documentElement.clientHeight;
+  if(!vw||!vh)return;
+  const s=Math.min(vw/16,vh/9);          // the largest 16:9 box that truly fits
+  g.style.width =Math.floor(s*16)+'px';
+  g.style.height=Math.floor(s*9)+'px';
+  requestAnimationFrame(syncCmdHeight);
+}
+addEventListener('resize',fitGame);
+addEventListener('orientationchange',()=>setTimeout(fitGame,120));
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',fitGame);
+  window.visualViewport.addEventListener('scroll',fitGame);
+}
+fitGame();
+setTimeout(fitGame,60);                   // iOS settles its chrome a beat late
+setTimeout(fitGame,400);
 function syncCmdHeight(){
   const g=$('#game');if(!g)return;
   const h=cmdwin?cmdwin.offsetHeight:0;
